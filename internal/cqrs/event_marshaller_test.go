@@ -7,6 +7,7 @@ import (
 	"github.com/davidterranova/cqrs/internal/cqrs"
 	"github.com/davidterranova/cqrs/internal/cqrs/memory"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testEventData struct {
@@ -18,7 +19,8 @@ func (d testEventData) Route(e cqrs.Event, a cqrs.Aggregate) {}
 
 func TestJSONEventMarshaller(t *testing.T) {
 	r := memory.NewEventRegistry()
-	r.Register(&testEventData{})
+	err := r.Register(&testEventData{})
+	require.NoError(t, err)
 
 	m := cqrs.NewJSONEventMarshaller(r)
 
