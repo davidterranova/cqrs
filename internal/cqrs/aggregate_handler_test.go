@@ -58,7 +58,7 @@ func (c cmdUpdateUser) Handle(a cqrs.Aggregate) ([]cqrs.Event, error) {
 func (d evtUserCreated) Route(e cqrs.Event, a cqrs.Aggregate) {
 	u, ok := a.(*user)
 	if !ok {
-		panic(fmt.Errorf("%w: %T", a, cqrs.ErrInvalidAggregateType))
+		panic(fmt.Errorf("%w: %T", cqrs.ErrInvalidAggregateType, a))
 	}
 
 	u.username = d.username
@@ -67,7 +67,7 @@ func (d evtUserCreated) Route(e cqrs.Event, a cqrs.Aggregate) {
 func (d evtUserUpdatedUsername) Route(e cqrs.Event, a cqrs.Aggregate) {
 	u, ok := a.(*user)
 	if !ok {
-		panic(fmt.Errorf("%w: %T", a, cqrs.ErrInvalidAggregateType))
+		panic(fmt.Errorf("%w: %T", cqrs.ErrInvalidAggregateType, a))
 	}
 
 	u.username = d.username
