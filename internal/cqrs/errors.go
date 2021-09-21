@@ -8,5 +8,6 @@ var (
 
 	ErrNotFound = errors.New("not found")
 
-	ErrInvalidAggregateType = errors.New("invalid aggregate type")
+	ErrInvalidAggregateType    = errors.New("invalid aggregate type")
+	ErrInvalidAggregateVersion = errors.New("invalid aggregate version")
 )

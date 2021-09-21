@@ -1,7 +1,6 @@
 package cqrs_test
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 
@@ -37,7 +36,7 @@ type evtUserUpdatedUsername struct {
 
 func (c cmdCreateUser) Handle(a cqrs.Aggregate) ([]cqrs.Event, error) {
 	if a.Version() != 0 {
-		return nil, errors.New("invalid aggregate version")
+		return nil, cqrs.ErrInvalidAggregateVersion
 	}
 
 	return []cqrs.Event{
@@ -47,7 +46,7 @@ func (c cmdCreateUser) Handle(a cqrs.Aggregate) ([]cqrs.Event, error) {
 
 func (c cmdUpdateUser) Handle(a cqrs.Aggregate) ([]cqrs.Event, error) {
 	if a.Version() == 0 {
-		return nil, errors.New("invalid aggregate version")
+		return nil, cqrs.ErrInvalidAggregateVersion
 	}
 
 	return []cqrs.Event{
