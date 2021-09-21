@@ -43,11 +43,6 @@ func (h *aggregateHandler) HandleCommand(cmd Command) (Aggregate, error) {
 		return nil, fmt.Errorf("command rejected: %w", err)
 	}
 
-	// DEBUG
-	for _, e := range events {
-		fmt.Printf("%s\n", e.String())
-	}
-
 	err = h.eventStore.Save(events...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to persist events: %w", err)
