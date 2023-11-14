@@ -1,0 +1,14 @@
+name: Spectral linter
+on:
+  - pull_request
+
+jobs:
+  build:
+    name: Run Spectral
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: stoplightio/spectral-action@latest
+        with:
+          file_glob: "docs/openapi/*.oas.yaml"
+          spectral_ruleset: "./docs/openapi/.spectral.yaml"

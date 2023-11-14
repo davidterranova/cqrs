@@ -1,0 +1,11 @@
+linters:
+  enable:
+    - dupl
+    - cyclop
+    - gocyclo
+    - errorlint
+    - funlen
+    - gochecknoglobals
+    - goconst
+    - gocritic
+    - gosec
