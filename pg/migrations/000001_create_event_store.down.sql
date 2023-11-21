@@ -1,0 +1,3 @@
+SET SCHEMA 'event_store';
+
+DROP TABLE IF EXISTS events CASCADE;

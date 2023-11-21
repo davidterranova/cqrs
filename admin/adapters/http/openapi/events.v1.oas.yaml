@@ -1,0 +1,101 @@
+openapi: 3.0.3
+info:
+  title: Events admin API
+  version: 1.0.0
+  contact: 
+    name: david terranova
+    email: davidp.terranova@gmail.com
+servers:
+  - url: http://localhost:8080/v1
+    description: Localhost
+tags:
+  - name: "events"
+    description: "Events API"
+paths:
+  /events:
+    get:
+      operationId: getEvents
+      tags:
+        - events
+      summary: List all events
+      parameters:
+        - name: aggregate_type
+          in: query
+          description: Aggregate type
+          required: false
+          schema:
+            type: string
+        - name: aggregate_id
+          in: query
+          description: Aggregate id
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: published
+          in: query
+          description: event published
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: "List all events"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+        "500":
+          description: "Internal Server Error"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    
+components:
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        error:
+          type: string
+    Event:
+      type: object
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          example: "e782ccdd-b0a2-4368-b65e-70aa273696c5"
+        event_type:
+          type: string
+          example: "created"
+        event_issued_at:
+          type: string
+          example: "2021-01-01T00:00:00Z"
+        event_issued_by:
+          type: string
+          example: "authenticated:e782ccdd-b0a2-4368-b65e-70aa273696c5"
+        aggregate_type:
+          type: string
+          example: "contact"
+        aggregate_id:
+          type: string
+          format: uuid
+          example: "e782ccdd-b0a2-4368-b65e-70aa273696c5"
+        aggregate_version:
+          type: integer
+          example: 1
+        event_data:
+          type: object
+
