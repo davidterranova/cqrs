@@ -19,6 +19,13 @@ func NewAggregateHandler[T eventsourcing.Aggregate](add *admin.App[T]) *Aggregat
 	}
 }
 
+type loadAggregateResponse[T eventsourcing.Aggregate] struct {
+	AggregateId      uuid.UUID                   `json:"aggregate_id"`
+	AggregateType    eventsourcing.AggregateType `json:"aggregate_type"`
+	AggregateVersion int                         `json:"aggregate_version"`
+	Aggregate        any                         `json:"aggregate"`
+}
+
 func (h *AggregateHandler[T]) LoadAggregate(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	aggregateId, err := xhttp.PathParamUUID(r, "aggregate_id")
@@ -39,7 +46,12 @@ func (h *AggregateHandler[T]) LoadAggregate(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	xhttp.WriteObject(ctx, w, http.StatusOK, aggregate)
+	xhttp.WriteObject(ctx, w, http.StatusOK, loadAggregateResponse[T]{
+		AggregateId:      aggregateId,
+		AggregateType:    (*aggregate).AggregateType(),
+		AggregateVersion: (*aggregate).AggregateVersion(),
+		Aggregate:        aggregate,
+	})
 }
 
 type republishAggregateResponse struct {

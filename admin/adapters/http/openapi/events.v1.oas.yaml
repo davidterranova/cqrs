@@ -81,6 +81,19 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  aggregate_id:
+                    type: string
+                    format: uuid
+                    example: "e782ccdd-b0a2-4368-b65e-70aa273696c5"
+                  aggregate_type:
+                    type: string
+                    example: "contact"
+                  aggregate_version:
+                    type: integer
+                    example: 1
+                  aggregate_data:
+                    type: object
         "500":
           description: "Internal Server Error"
           content:
