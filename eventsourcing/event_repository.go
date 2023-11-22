@@ -2,28 +2,17 @@ package eventsourcing
 
 import (
 	"context"
-	"time"
 
 	"github.com/davidterranova/cqrs/user"
-
 	"github.com/google/uuid"
 )
 
-type Event[T Aggregate] interface {
-	Id() uuid.UUID
-	AggregateId() uuid.UUID
-	AggregateType() AggregateType
-	EventType() string
-	IssuedAt() time.Time
-	IssuedBy() user.User
-	Apply(*T) error
+const (
+	Published   = true
+	Unpublished = false
+)
 
-	// SetBase(EventBase[T]) is used internally by eventsourcing package
-	SetBase(EventBase[T])
-	AggregateVersion() int
-}
-
-type IEventRepository interface {
+type EventRepository interface {
 	Save(ctx context.Context, publishOutbox bool, events ...EventInternal) error
 	Get(ctx context.Context, filter EventQuery) ([]EventInternal, error)
 
@@ -31,4 +20,16 @@ type IEventRepository interface {
 	GetUnpublished(ctx context.Context, batchSize int) ([]EventInternal, error)
 	// MarkAs marks events as published / unpublished
 	MarkAs(ctx context.Context, asPublished bool, events ...EventInternal) error
+}
+
+type EventQuery interface {
+	AggregateId() *uuid.UUID
+	AggregateType() *AggregateType
+	EventType() *string
+	Published() *bool
+	IssuedBy() user.User
+	Limit() *int
+	OrderBy() (*string, *string)
+	GroupBy() *string
+	UpToVersion() *int
 }

@@ -53,6 +53,75 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+
+  /aggregates/{aggregate_id}:
+    get:
+      operationId: getAggregate
+      tags:
+        - aggregates
+      summary: Load an aggregate from the event store
+      parameters:
+        - name: aggregate_id
+          in: path
+          description: Aggregate id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: to_version
+          in: query
+          description: until which version to load the aggregate
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: "Aggregate"
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          description: "Internal Server Error"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /aggregates/{aggregate_id}:republish:
+    post:
+      operationId: republishAggregate
+      tags:
+        - aggregates
+      summary: Republish an aggregate events
+      parameters:
+        - name: aggregate_id
+          in: path
+          description: Aggregate id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: "Aggregate"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  aggregate_id:
+                    type: string
+                    format: uuid
+                    example: "e782ccdd-b0a2-4368-b65e-70aa273696c5"
+                  nb_republished_events:
+                    type: integer
+                    example: 1
+        "500":
+          description: "Internal Server Error"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
     
 components:
   responses:

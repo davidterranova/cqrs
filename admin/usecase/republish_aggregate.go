@@ -9,16 +9,16 @@ import (
 )
 
 type RepublishAggregateHandler[T eventsourcing.Aggregate] struct {
-	repo eventsourcing.EventRepository[T]
+	repo eventsourcing.EventRepository
 }
 
-func NewRepublishAggregateHandler[T eventsourcing.Aggregate](repo eventsourcing.EventRepository[T]) *RepublishAggregateHandler[T] {
+func NewRepublishAggregateHandler[T eventsourcing.Aggregate](repo eventsourcing.EventRepository) *RepublishAggregateHandler[T] {
 	return &RepublishAggregateHandler[T]{
 		repo: repo,
 	}
 }
 
-func (h *RepublishAggregateHandler[T]) Handle(ctx context.Context, aggregateId uuid.UUID) error {
+func (h *RepublishAggregateHandler[T]) Handle(ctx context.Context, aggregateId uuid.UUID) (int, error) {
 	events, err := h.repo.Get(
 		ctx,
 		eventsourcing.NewEventQuery(
@@ -26,13 +26,13 @@ func (h *RepublishAggregateHandler[T]) Handle(ctx context.Context, aggregateId u
 		),
 	)
 	if err != nil {
-		return fmt.Errorf("republishAggregateHandler: failed to list aggregate events: %w", err)
+		return 0, fmt.Errorf("republishAggregateHandler: failed to list aggregate events: %w", err)
 	}
 
 	err = h.repo.MarkAs(ctx, eventsourcing.Unpublished, events...)
 	if err != nil {
-		return fmt.Errorf("republishAggregateHandler: failed to republish aggregate events: %w", err)
+		return 0, fmt.Errorf("republishAggregateHandler: failed to republish aggregate events: %w", err)
 	}
 
-	return nil
+	return len(events), nil
 }

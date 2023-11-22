@@ -2,8 +2,7 @@ package eventsourcing
 
 import (
 	"context"
-
-	"github.com/davidterranova/cqrs/user"
+	"fmt"
 
 	"github.com/google/uuid"
 )
@@ -21,40 +20,13 @@ type EventStore[T Aggregate] interface {
 	RepublishEvents(ctx context.Context, events ...Event[T]) error
 }
 
-const (
-	Published   = true
-	Unpublished = false
-)
-
-type EventRepository[T Aggregate] interface {
-	Save(ctx context.Context, publishOutbox bool, events ...Event[T]) error
-	Get(ctx context.Context, filter EventQuery) ([]Event[T], error)
-
-	// load events from outbox that have not been published yet
-	GetUnpublished(ctx context.Context, batchSize int) ([]Event[T], error)
-	// MarkAs marks events as published / unpublished
-	MarkAs(ctx context.Context, asPublished bool, events ...Event[T]) error
-}
-
-type EventQuery interface {
-	AggregateId() *uuid.UUID
-	AggregateType() *AggregateType
-	EventType() *string
-	Published() *bool
-	IssuedBy() user.User
-	Limit() *int
-	OrderBy() (*string, *string)
-	GroupBy() *string
-	UpToVersion() *int
-}
-
 type eventStore[T Aggregate] struct {
-	repo       EventRepository[T]
+	repo       EventRepository
 	registry   EventRegistry[T]
 	withOutbox bool
 }
 
-func NewEventStore[T Aggregate](repo EventRepository[T], registry EventRegistry[T], withOutbox bool) *eventStore[T] {
+func NewEventStore[T Aggregate](repo EventRepository, registry EventRegistry[T], withOutbox bool) *eventStore[T] {
 	return &eventStore[T]{
 		repo:       repo,
 		registry:   registry,
@@ -63,27 +35,62 @@ func NewEventStore[T Aggregate](repo EventRepository[T], registry EventRegistry[
 }
 
 func (s *eventStore[T]) Store(ctx context.Context, events ...Event[T]) error {
-	return s.repo.Save(ctx, s.withOutbox, events...)
+	internalEvents, err := toEventInternalSlice[T](events)
+	if err != nil {
+		return fmt.Errorf("failed to convert events to internal events: %w", err)
+	}
+
+	return s.repo.Save(ctx, s.withOutbox, internalEvents...)
 }
 
 func (s *eventStore[T]) Load(ctx context.Context, aggregateType AggregateType, aggregateId uuid.UUID) ([]Event[T], error) {
-	return s.repo.Get(
+	internalEvents, err := s.repo.Get(
 		ctx,
 		NewEventQuery(
 			EventQueryWithAggregateType(aggregateType),
 			EventQueryWithAggregateId(aggregateId),
 		),
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load events from repository: %w", err)
+	}
+
+	events, err := FromEventInternalSlice[T](internalEvents, s.registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert internal events to events: %w", err)
+	}
+
+	return events, nil
 }
 
 func (s *eventStore[T]) LoadUnpublished(ctx context.Context, batchSize int) ([]Event[T], error) {
-	return s.repo.GetUnpublished(ctx, batchSize)
+	internalEvents, err := s.repo.GetUnpublished(ctx, batchSize)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load unpublished events from repository: %w", err)
+	}
+
+	events, err := FromEventInternalSlice[T](internalEvents, s.registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert internal events to events: %w", err)
+	}
+
+	return events, nil
 }
 
 func (s *eventStore[T]) MarkPublished(ctx context.Context, events ...Event[T]) error {
-	return s.repo.MarkAs(ctx, true, events...)
+	internalEvents, err := toEventInternalSlice[T](events)
+	if err != nil {
+		return fmt.Errorf("failed to convert events to internal events: %w", err)
+	}
+
+	return s.repo.MarkAs(ctx, true, internalEvents...)
 }
 
 func (s *eventStore[T]) RepublishEvents(ctx context.Context, events ...Event[T]) error {
-	return s.repo.MarkAs(ctx, false, events...)
+	internalEvents, err := toEventInternalSlice[T](events)
+	if err != nil {
+		return fmt.Errorf("failed to convert events to internal events: %w", err)
+	}
+
+	return s.repo.MarkAs(ctx, false, internalEvents...)
 }

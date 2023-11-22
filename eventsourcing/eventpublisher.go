@@ -8,16 +8,18 @@ import (
 )
 
 type EventStreamPublisher[T Aggregate] struct {
-	eventRepo EventRepository[T]
-	stream    Publisher[T]
-	batchSize int
+	eventRepo     EventRepository
+	stream        Publisher[T]
+	eventRegistry EventRegistry[T]
+	batchSize     int
 }
 
-func NewEventStreamPublisher[T Aggregate](eventRepo EventRepository[T], stream Publisher[T], batchSize int) *EventStreamPublisher[T] {
+func NewEventStreamPublisher[T Aggregate](eventRepo EventRepository, eventRegistry EventRegistry[T], stream Publisher[T], batchSize int) *EventStreamPublisher[T] {
 	return &EventStreamPublisher[T]{
-		eventRepo: eventRepo,
-		stream:    stream,
-		batchSize: batchSize,
+		eventRepo:     eventRepo,
+		eventRegistry: eventRegistry,
+		stream:        stream,
+		batchSize:     batchSize,
 	}
 }
 
@@ -52,13 +54,18 @@ func (p *EventStreamPublisher[T]) Run(ctx context.Context) {
 }
 
 func (p *EventStreamPublisher[T]) processBatch(ctx context.Context) (int, error) {
-	events, err := p.eventRepo.GetUnpublished(ctx, p.batchSize)
+	internalEvents, err := p.eventRepo.GetUnpublished(ctx, p.batchSize)
 	if err != nil {
 		return -1, err
 	}
 
-	if len(events) == 0 {
+	if len(internalEvents) == 0 {
 		return 0, nil
+	}
+
+	events, err := FromEventInternalSlice[T](internalEvents, p.eventRegistry)
+	if err != nil {
+		return -1, err
 	}
 
 	err = p.stream.Publish(ctx, events...)
@@ -66,7 +73,7 @@ func (p *EventStreamPublisher[T]) processBatch(ctx context.Context) (int, error)
 		return -1, err
 	}
 
-	err = p.eventRepo.MarkAs(ctx, Published, events...)
+	err = p.eventRepo.MarkAs(ctx, Published, internalEvents...)
 	if err != nil {
 		return -1, err
 	}

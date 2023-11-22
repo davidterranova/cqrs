@@ -6,6 +6,7 @@ import (
 	"github.com/davidterranova/cqrs/admin"
 	"github.com/davidterranova/cqrs/eventsourcing"
 	"github.com/davidterranova/cqrs/xhttp"
+	"github.com/google/uuid"
 )
 
 type AggregateHandler[T eventsourcing.Aggregate] struct {
@@ -41,6 +42,11 @@ func (h *AggregateHandler[T]) LoadAggregate(w http.ResponseWriter, r *http.Reque
 	xhttp.WriteObject(ctx, w, http.StatusOK, aggregate)
 }
 
+type republishAggregateResponse struct {
+	AggregateId         uuid.UUID `json:"aggregate_id"`
+	NbRepublishedEvents int       `json:"nb_republished_events"`
+}
+
 func (h *AggregateHandler[T]) RepublishAggregate(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	aggregateId, err := xhttp.PathParamUUID(r, "aggregate_id")
@@ -49,11 +55,14 @@ func (h *AggregateHandler[T]) RepublishAggregate(w http.ResponseWriter, r *http.
 		return
 	}
 
-	err = h.add.RepublishAggregate(ctx, aggregateId)
+	nbRepublishedEvents, err := h.add.RepublishAggregate(ctx, aggregateId)
 	if err != nil {
 		xhttp.WriteError(ctx, w, http.StatusInternalServerError, "failed to republish aggregate", err)
 		return
 	}
 
-	xhttp.WriteObject(ctx, w, http.StatusOK, nil)
+	xhttp.WriteObject(ctx, w, http.StatusOK, republishAggregateResponse{
+		AggregateId:         aggregateId,
+		NbRepublishedEvents: nbRepublishedEvents,
+	})
 }

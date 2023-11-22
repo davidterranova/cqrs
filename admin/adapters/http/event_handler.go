@@ -67,5 +67,5 @@ func (h *EventHandler[T]) ListEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	xhttp.WriteObject(ctx, w, http.StatusOK, events)
+	xhttp.WriteObject(ctx, w, http.StatusOK, fromEventInternalSlice(events))
 }

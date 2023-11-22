@@ -4,26 +4,25 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/davidterranova/cqrs/eventsourcing"
 	"github.com/davidterranova/cqrs/user"
+
+	"github.com/davidterranova/cqrs/eventsourcing"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
-type pgEventRepository[T eventsourcing.Aggregate] struct {
-	db       *gorm.DB
-	registry eventsourcing.EventRegistry[T]
+type pgEventRepository struct {
+	db *gorm.DB
 }
 
-func NewPGEventRepository[T eventsourcing.Aggregate](db *gorm.DB, registry eventsourcing.EventRegistry[T]) *pgEventRepository[T] {
-	return &pgEventRepository[T]{
-		db:       db,
-		registry: registry,
+func NewPGEventRepository(db *gorm.DB) *pgEventRepository {
+	return &pgEventRepository{
+		db: db,
 	}
 }
 
-func (r pgEventRepository[T]) Save(ctx context.Context, publishOutbox bool, events ...eventsourcing.Event[T]) error {
+func (r pgEventRepository) Save(ctx context.Context, publishOutbox bool, events ...eventsourcing.EventInternal) error {
 	if len(events) == 0 {
 		return nil
 	}
@@ -39,27 +38,27 @@ func (r pgEventRepository[T]) Save(ctx context.Context, publishOutbox bool, even
 		pgEvents = append(pgEvents, pgEvent)
 
 		outboxEntries = append(outboxEntries, &pgEventOutbox{
-			EventId:          event.Id(),
+			EventId:          event.EventId,
 			Published:        false,
-			AggregateVersion: event.AggregateVersion(),
+			AggregateVersion: event.AggregateVersion,
 		})
 	}
 
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		err := tx.Create(pgEvents).Error
+		err := tx.Debug().Create(pgEvents).Error
 		if err != nil {
 			return fmt.Errorf("failed to create events in event_store table: %w", err)
 		}
 
 		for _, event := range events {
-			log.Debug().Str("type", event.EventType()).Interface("event", event).Msg("stored event")
+			log.Debug().Str("type", event.EventType).Interface("event", event).Msg("stored event")
 		}
 
 		if !publishOutbox {
 			return nil
 		}
 
-		err = tx.Create(outboxEntries).Error
+		err = tx.Debug().Create(outboxEntries).Error
 		if err != nil {
 			return fmt.Errorf("failed to create events in event_outbox table: %w", err)
 		}
@@ -68,7 +67,7 @@ func (r pgEventRepository[T]) Save(ctx context.Context, publishOutbox bool, even
 	})
 }
 
-func (r pgEventRepository[T]) Get(ctx context.Context, filter eventsourcing.EventQuery) ([]eventsourcing.Event[T], error) {
+func (r pgEventRepository) Get(ctx context.Context, filter eventsourcing.EventQuery) ([]eventsourcing.EventInternal, error) {
 	var pgEvents []pgEvent
 	query := r.db.WithContext(ctx).
 		Model(&pgEvent{}).
@@ -79,7 +78,7 @@ func (r pgEventRepository[T]) Get(ctx context.Context, filter eventsourcing.Even
 			aggregateTypeScope(filter.AggregateType()),
 			aggregateIdScope(filter.AggregateId()),
 			upToVersionScope(filter.UpToVersion()),
-		).Joins("LEFT JOIN events_outbox ON events_outbox.event_id = events.event_id")
+		)
 
 	if filter.Limit() != nil {
 		query = query.Limit(*filter.Limit())
@@ -90,13 +89,14 @@ func (r pgEventRepository[T]) Get(ctx context.Context, filter eventsourcing.Even
 
 	err := query.
 		Debug().
+		Joins("Outbox"). // Preload("Outbox") to do it in two queries
 		Find(&pgEvents).
 		Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to get events from event_store table: %w", err)
 	}
 
-	events, err := fromPgEvenSlice[T](r.registry, pgEvents)
+	events, err := fromPgEventSlice(pgEvents)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hydrate events from pgEvents: %w", err)
 	}
@@ -104,7 +104,7 @@ func (r pgEventRepository[T]) Get(ctx context.Context, filter eventsourcing.Even
 	return events, nil
 }
 
-func (r pgEventRepository[T]) GetUnpublished(ctx context.Context, batchSize int) ([]eventsourcing.Event[T], error) {
+func (r pgEventRepository) GetUnpublished(ctx context.Context, batchSize int) ([]eventsourcing.EventInternal, error) {
 	var pgOutboxEntries []uuid.UUID
 	err := r.db.
 		WithContext(ctx).
@@ -133,21 +133,21 @@ func (r pgEventRepository[T]) GetUnpublished(ctx context.Context, batchSize int)
 		log.Debug().Str("type", event.EventType).Interface("event", event).Msg("loaded unpublished event")
 	}
 
-	return fromPgEvenSlice(r.registry, unpublishedEvents)
+	return fromPgEventSlice(unpublishedEvents)
 }
 
-func (r pgEventRepository[T]) MarkAs(ctx context.Context, asPublished bool, events ...eventsourcing.Event[T]) error {
+func (r pgEventRepository) MarkAs(ctx context.Context, asPublished bool, events ...eventsourcing.EventInternal) error {
 	if len(events) == 0 {
 		return nil
 	}
 
 	var eventIds []uuid.UUID
 	for _, event := range events {
-		eventIds = append(eventIds, event.Id())
+		eventIds = append(eventIds, event.EventId)
 	}
 
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return tx.Model(&pgEventOutbox{}).Where("event_id IN ?", eventIds).Update("published", asPublished).Error
+		return tx.Debug().Model(&pgEventOutbox{}).Where("event_id IN ?", eventIds).Update("published", asPublished).Error
 	})
 }
 
@@ -207,6 +207,6 @@ func upToVersionScope(version *int) func(db *gorm.DB) *gorm.DB {
 			return db
 		}
 
-		return db.Where("events_outbox.aggregate_version <= ?", *version)
+		return db.Where("events.aggregate_version <= ?", *version)
 	}
 }
