@@ -55,13 +55,13 @@ func (h *commandHandler[T]) HandleCommand(ctx context.Context, c Command[T]) (*T
 		return new(T), fmt.Errorf("failed to hydrate aggregate(%s#%s): %w", c.AggregateType(), c.AggregateId(), err)
 	}
 
-	// check command validity for aggregate
+	// check command validity for aggregate and retrieve result events
 	events, err := h.ApplyCommand(ctx, aggregate, c)
 	if err != nil {
 		return new(T), fmt.Errorf("command (%T) rejected on aggregate(%s#%s): %w", c, c.AggregateType(), c.AggregateId(), err)
 	}
 
-	// apply events to aggregate
+	// apply new events to aggregate
 	aggregate, err = h.ApplyEvents(ctx, aggregate, events...)
 	if err != nil {
 		return new(T), fmt.Errorf("failed to apply events to aggregate(%s#%s): %w", c.AggregateType(), c.AggregateId(), err)

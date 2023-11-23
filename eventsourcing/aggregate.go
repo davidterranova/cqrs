@@ -7,9 +7,9 @@ type AggregateType string
 type Aggregate interface {
 	AggregateId() uuid.UUID
 	AggregateType() AggregateType
+	AggregateVersion() int
 
 	IncrementVersion()
-	AggregateVersion() int
 }
 
 type AggregateBase[T Aggregate] struct {
