@@ -45,7 +45,7 @@ func (r pgEventRepository) Save(ctx context.Context, publishOutbox bool, events 
 	}
 
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		err := tx.Debug().Create(pgEvents).Error
+		err := tx.Create(pgEvents).Error
 		if err != nil {
 			return fmt.Errorf("failed to create events in event_store table: %w", err)
 		}
@@ -58,7 +58,7 @@ func (r pgEventRepository) Save(ctx context.Context, publishOutbox bool, events 
 			return nil
 		}
 
-		err = tx.Debug().Create(outboxEntries).Error
+		err = tx.Create(outboxEntries).Error
 		if err != nil {
 			return fmt.Errorf("failed to create events in event_outbox table: %w", err)
 		}
@@ -88,7 +88,6 @@ func (r pgEventRepository) Get(ctx context.Context, filter eventsourcing.EventQu
 	}
 
 	err := query.
-		Debug().
 		Joins("Outbox"). // Preload("Outbox") to do it in two queries
 		Find(&pgEvents).
 		Error
@@ -147,7 +146,7 @@ func (r pgEventRepository) MarkAs(ctx context.Context, asPublished bool, events 
 	}
 
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return tx.Debug().Model(&pgEventOutbox{}).Where("event_id IN ?", eventIds).Update("published", asPublished).Error
+		return tx.Model(&pgEventOutbox{}).Where("event_id IN ?", eventIds).Update("published", asPublished).Error
 	})
 }
 
