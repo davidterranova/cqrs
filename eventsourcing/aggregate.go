@@ -1,6 +1,10 @@
 package eventsourcing
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type AggregateType string
 
@@ -16,6 +20,10 @@ type AggregateBase[T Aggregate] struct {
 	aggregateId      uuid.UUID
 	aggregateVersion int
 	events           []Event[T]
+
+	createdAt time.Time
+	updatedAt time.Time
+	deletedAt *time.Time
 }
 
 func NewAggregateBase[T Aggregate](aggregateId uuid.UUID, version int) *AggregateBase[T] {
@@ -30,10 +38,22 @@ func (a AggregateBase[T]) AggregateId() uuid.UUID {
 	return a.aggregateId
 }
 
-func (a *AggregateBase[T]) Process(e Event[T]) {
+func (a *AggregateBase[T]) Init(e Event[T]) {
 	a.aggregateId = e.AggregateId()
+	a.createdAt = e.IssuedAt()
+	a.Process(e)
+}
+
+func (a *AggregateBase[T]) Delete(e Event[T]) {
+	now := e.IssuedAt()
+	a.deletedAt = &now
+	a.Process(e)
+}
+
+func (a *AggregateBase[T]) Process(e Event[T]) {
 	a.aggregateVersion = e.AggregateVersion()
 	a.events = append(a.events, e)
+	a.updatedAt = e.IssuedAt()
 }
 
 func (a *AggregateBase[T]) IncrementVersion() {
@@ -46,4 +66,16 @@ func (a AggregateBase[T]) AggregateVersion() int {
 
 func (a AggregateBase[T]) Events() []Event[T] {
 	return a.events
+}
+
+func (a AggregateBase[T]) CreatedAt() time.Time {
+	return a.createdAt
+}
+
+func (a AggregateBase[T]) UpdatedAt() time.Time {
+	return a.updatedAt
+}
+
+func (a AggregateBase[T]) DeletedAt() *time.Time {
+	return a.deletedAt
 }

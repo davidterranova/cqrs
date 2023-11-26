@@ -65,7 +65,7 @@ func (r *inMemoryEventRepository) Get(_ context.Context, filter eventsourcing.Ev
 			add = false
 		}
 
-		if filter.IssuedBy() != nil && filter.IssuedBy() != (*me.event).EventIssuedBy {
+		if filter.IssuedBy() != nil && filter.IssuedBy().String() != (*me.event).EventIssuedBy {
 			add = false
 		}
 

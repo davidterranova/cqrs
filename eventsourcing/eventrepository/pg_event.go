@@ -2,10 +2,8 @@ package eventrepository
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
-	"github.com/davidterranova/contacts/pkg/user"
 	"github.com/davidterranova/cqrs/eventsourcing"
 	"github.com/google/uuid"
 )
@@ -38,59 +36,38 @@ func (pgEventOutbox) TableName() string {
 	return "events_outbox"
 }
 
-func toPgEvent(e eventsourcing.EventInternal) (*pgEvent, error) {
-	byteUser, err := e.EventIssuedBy.MarshalJSON()
-	if err != nil {
-		return nil, fmt.Errorf("%w: failed to marshal user", err)
-	}
-
-	data, err := json.Marshal(e)
-	if err != nil {
-		return nil, fmt.Errorf("%w: failed to marshal event", err)
-	}
-
+func toPgEvent(e eventsourcing.EventInternal) *pgEvent {
 	return &pgEvent{
 		EventId:          e.EventId,
 		EventType:        e.EventType,
 		EventIssuedAt:    e.EventIssuedAt,
-		EventIssuedBy:    string(byteUser),
-		EventData:        data,
+		EventIssuedBy:    e.EventIssuedBy,
+		EventData:        e.EventData,
 		AggregateId:      e.AggregateId,
 		AggregateType:    e.AggregateType,
 		AggregateVersion: e.AggregateVersion,
-	}, nil
+	}
 }
 
 func fromPgEventSlice(pgEvents []pgEvent) ([]eventsourcing.EventInternal, error) {
 	events := make([]eventsourcing.EventInternal, 0, len(pgEvents))
 	for _, pgEvent := range pgEvents {
-		internalEvent, err := fromPgEvent(pgEvent)
-		if err != nil {
-			return nil, err
-		}
-
-		events = append(events, internalEvent)
+		events = append(events, fromPgEvent(pgEvent))
 	}
 
 	return events, nil
 }
 
-func fromPgEvent(pgEvent pgEvent) (eventsourcing.EventInternal, error) {
-	u := user.New(uuid.Nil)
-	err := json.Unmarshal([]byte(pgEvent.EventIssuedBy), &u)
-	if err != nil {
-		return eventsourcing.EventInternal{}, fmt.Errorf("%w: failed to unmarshal user", err)
-	}
-
+func fromPgEvent(pgEvent pgEvent) eventsourcing.EventInternal {
 	return eventsourcing.EventInternal{
 		EventId:          pgEvent.EventId,
 		EventType:        pgEvent.EventType,
 		EventIssuedAt:    pgEvent.EventIssuedAt,
-		EventIssuedBy:    u,
+		EventIssuedBy:    pgEvent.EventIssuedBy,
 		EventData:        pgEvent.EventData,
 		EventPublished:   pgEvent.Outbox.Published,
 		AggregateId:      pgEvent.AggregateId,
 		AggregateType:    pgEvent.AggregateType,
 		AggregateVersion: pgEvent.AggregateVersion,
-	}, nil
+	}
 }

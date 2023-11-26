@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/davidterranova/cqrs/user"
 	"github.com/google/uuid"
 )
 
@@ -21,16 +22,18 @@ type EventStore[T Aggregate] interface {
 }
 
 type eventStore[T Aggregate] struct {
-	repo       EventRepository
-	registry   EventRegistry[T]
-	withOutbox bool
+	repo        EventRepository
+	registry    EventRegistry[T]
+	userFactory user.UserFactory
+	withOutbox  bool
 }
 
-func NewEventStore[T Aggregate](repo EventRepository, registry EventRegistry[T], withOutbox bool) *eventStore[T] {
+func NewEventStore[T Aggregate](repo EventRepository, registry EventRegistry[T], userFactory user.UserFactory, withOutbox bool) *eventStore[T] {
 	return &eventStore[T]{
-		repo:       repo,
-		registry:   registry,
-		withOutbox: withOutbox,
+		repo:        repo,
+		registry:    registry,
+		userFactory: userFactory,
+		withOutbox:  withOutbox,
 	}
 }
 
@@ -55,7 +58,7 @@ func (s *eventStore[T]) Load(ctx context.Context, aggregateType AggregateType, a
 		return nil, fmt.Errorf("failed to load events from repository: %w", err)
 	}
 
-	events, err := FromEventInternalSlice[T](internalEvents, s.registry)
+	events, err := FromEventInternalSlice[T](internalEvents, s.registry, s.userFactory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert internal events to events: %w", err)
 	}
@@ -69,7 +72,7 @@ func (s *eventStore[T]) LoadUnpublished(ctx context.Context, batchSize int) ([]E
 		return nil, fmt.Errorf("failed to load unpublished events from repository: %w", err)
 	}
 
-	events, err := FromEventInternalSlice[T](internalEvents, s.registry)
+	events, err := FromEventInternalSlice[T](internalEvents, s.registry, s.userFactory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert internal events to events: %w", err)
 	}

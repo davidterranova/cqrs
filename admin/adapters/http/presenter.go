@@ -32,7 +32,7 @@ func fromEventInternal(e eventsourcing.EventInternal) Event {
 		EventId:          e.EventId,
 		EventType:        e.EventType,
 		EventIssuedAt:    e.EventIssuedAt,
-		EventIssuedBy:    e.EventIssuedBy.String(),
+		EventIssuedBy:    e.EventIssuedBy,
 		EventPublished:   e.EventPublished,
 		AggregateId:      e.AggregateId,
 		AggregateType:    string(e.AggregateType),

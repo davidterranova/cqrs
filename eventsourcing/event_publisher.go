@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/davidterranova/cqrs/user"
 	"github.com/rs/zerolog/log"
 )
 
@@ -11,13 +12,15 @@ type EventStreamPublisher[T Aggregate] struct {
 	eventRepo     EventRepository
 	stream        Publisher[T]
 	eventRegistry EventRegistry[T]
+	userFactory   user.UserFactory
 	batchSize     int
 }
 
-func NewEventStreamPublisher[T Aggregate](eventRepo EventRepository, eventRegistry EventRegistry[T], stream Publisher[T], batchSize int) *EventStreamPublisher[T] {
+func NewEventStreamPublisher[T Aggregate](eventRepo EventRepository, eventRegistry EventRegistry[T], userFactory user.UserFactory, stream Publisher[T], batchSize int) *EventStreamPublisher[T] {
 	return &EventStreamPublisher[T]{
 		eventRepo:     eventRepo,
 		eventRegistry: eventRegistry,
+		userFactory:   userFactory,
 		stream:        stream,
 		batchSize:     batchSize,
 	}
@@ -63,7 +66,7 @@ func (p *EventStreamPublisher[T]) processBatch(ctx context.Context) (int, error)
 		return 0, nil
 	}
 
-	events, err := FromEventInternalSlice[T](internalEvents, p.eventRegistry)
+	events, err := FromEventInternalSlice[T](internalEvents, p.eventRegistry, p.userFactory)
 	if err != nil {
 		return -1, err
 	}

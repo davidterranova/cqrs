@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/davidterranova/cqrs/user"
+
 	"github.com/google/uuid"
 )
 
 type EventInternal struct {
 	EventId          uuid.UUID
 	EventIssuedAt    time.Time
-	EventIssuedBy    user.User
+	EventIssuedBy    string
 	EventType        string
 	EventData        []byte
 	EventPublished   bool
@@ -43,7 +44,7 @@ func toEventInternal[T Aggregate](e Event[T]) (EventInternal, error) {
 	return EventInternal{
 		EventId:          e.Id(),
 		EventIssuedAt:    e.IssuedAt(),
-		EventIssuedBy:    e.IssuedBy(),
+		EventIssuedBy:    e.IssuedBy().String(),
 		EventType:        e.EventType(),
 		EventData:        data,
 		AggregateType:    e.AggregateType(),
@@ -52,10 +53,10 @@ func toEventInternal[T Aggregate](e Event[T]) (EventInternal, error) {
 	}, nil
 }
 
-func FromEventInternalSlice[T Aggregate](internalEvents []EventInternal, registry EventRegistry[T]) ([]Event[T], error) {
+func FromEventInternalSlice[T Aggregate](internalEvents []EventInternal, registry EventRegistry[T], userFactory user.UserFactory) ([]Event[T], error) {
 	events := make([]Event[T], 0, len(internalEvents))
 	for _, internalEvent := range internalEvents {
-		event, err := fromEventInternal(internalEvent, registry)
+		event, err := fromEventInternal(internalEvent, registry, userFactory)
 		if err != nil {
 			return nil, err
 		}
@@ -65,12 +66,18 @@ func FromEventInternalSlice[T Aggregate](internalEvents []EventInternal, registr
 	return events, nil
 }
 
-func fromEventInternal[T Aggregate](internalEvent EventInternal, registry EventRegistry[T]) (Event[T], error) {
+func fromEventInternal[T Aggregate](internalEvent EventInternal, registry EventRegistry[T], userFactory user.UserFactory) (Event[T], error) {
+	issuedBy := userFactory()
+	err := issuedBy.FromString(internalEvent.EventIssuedBy)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal user: %w", err)
+	}
+
 	return registry.Hydrate(
 		*NewEventBaseFromRepository[T](
 			internalEvent.EventId,
 			internalEvent.EventType,
-			internalEvent.EventIssuedBy,
+			issuedBy,
 			internalEvent.EventIssuedAt,
 			internalEvent.AggregateType,
 			internalEvent.AggregateId,

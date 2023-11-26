@@ -31,11 +31,7 @@ func (r pgEventRepository) Save(ctx context.Context, publishOutbox bool, events 
 	outboxEntries := make([]*pgEventOutbox, 0, len(events))
 
 	for _, event := range events {
-		pgEvent, err := toPgEvent(event)
-		if err != nil {
-			return err
-		}
-		pgEvents = append(pgEvents, pgEvent)
+		pgEvents = append(pgEvents, toPgEvent(event))
 
 		outboxEntries = append(outboxEntries, &pgEventOutbox{
 			EventId:          event.EventId,

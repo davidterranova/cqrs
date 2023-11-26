@@ -12,12 +12,11 @@ const (
 	UserTypeUnauthenticated UserType = "unauthenticated"
 )
 
+type UserFactory func() User
+
 type User interface {
 	Id() uuid.UUID
 	Type() UserType
-	IsAuthenticatedOrSystem() bool
-	MarshalJSON() ([]byte, error)
-	UnmarshalJSON([]byte) error
 	String() string
 	FromString(string) error
 }
