@@ -10,17 +10,50 @@ import (
 	"strconv"
 
 	"github.com/golang-migrate/migrate/v4/source"
+	"github.com/rs/zerolog/log"
 )
 
 //go:embed migrations/*.sql
-var lfs embed.FS
+var EventSourcingFS embed.FS
+
+type Migrations struct {
+	localFS map[string]iMigration
+}
+
+type iMigration struct {
+	embed.FS
+	path string
+}
+
+func NewMigrations() *Migrations {
+	return &Migrations{
+		localFS: map[string]iMigration{},
+	}
+}
+
+func (m *Migrations) Append(key string, path string, lfs embed.FS) {
+	m.localFS[key] = iMigration{
+		FS:   lfs,
+		path: path,
+	}
+}
+
+func (m *Migrations) Get(key string) (embed.FS, string, error) {
+	im, ok := m.localFS[key]
+	if !ok {
+		return embed.FS{}, "", fmt.Errorf("migration %s not found", key)
+	}
+
+	return im.FS, im.path, nil
+}
 
 type driver struct {
 	PartialDriver
 }
 
-func NewMigratorFS() (source.Driver, error) {
-	return newMigrator(lfs, "migrations")
+func NewMigratorFS(lfs embed.FS, path string) (source.Driver, error) {
+	return newMigrator(lfs, path)
+	// return newMigrator(lfs, "migrations")
 }
 
 // New returns a newMigrator Driver from io/fs#FS and a relative path.
@@ -63,6 +96,7 @@ func (d *PartialDriver) Init(fsys fs.FS, path string) error {
 		if e.IsDir() {
 			continue
 		}
+		log.Info().Str("file", e.Name()).Msg("found migration")
 		m, err := source.DefaultParse(e.Name())
 		if err != nil {
 			continue
