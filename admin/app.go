@@ -5,7 +5,6 @@ import (
 
 	"github.com/davidterranova/cqrs/admin/usecase"
 	"github.com/davidterranova/cqrs/eventsourcing"
-	"github.com/davidterranova/cqrs/user"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
@@ -26,7 +25,7 @@ func NewwApp[T eventsourcing.Aggregate](listEvent *usecase.ListEventHandler, loa
 	}
 }
 
-func NewApp[T eventsourcing.Aggregate](eventRepository eventsourcing.EventRepository, registry eventsourcing.EventRegistry[T], userFactory user.UserFactory, aggregateType eventsourcing.AggregateType, factory eventsourcing.AggregateFactory[T]) *App[T] {
+func NewApp[T eventsourcing.Aggregate](eventRepository eventsourcing.EventRepository, registry eventsourcing.EventRegistry[T], userFactory eventsourcing.UserFactory, aggregateType eventsourcing.AggregateType, factory eventsourcing.AggregateFactory[T]) *App[T] {
 	// set to false to disable CQRS and remain in eventsourcing context
 	CQRS := true
 	eventstore := eventsourcing.NewEventStore[T](eventRepository, registry, userFactory, CQRS)

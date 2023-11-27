@@ -1,4 +1,4 @@
-package user
+package eventsourcing
 
 import (
 	"github.com/google/uuid"

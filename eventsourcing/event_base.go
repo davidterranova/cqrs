@@ -4,21 +4,20 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/davidterranova/cqrs/user"
 	"github.com/google/uuid"
 )
 
 type EventBase[T Aggregate] struct {
 	eventId          uuid.UUID
 	eventIssuesAt    time.Time
-	eventIssuedBy    user.User
+	eventIssuedBy    User
 	eventType        string
 	aggregateType    AggregateType
 	aggregateId      uuid.UUID
 	aggregateVersion int
 }
 
-func NewEventBase[T Aggregate](aggregateType AggregateType, aggregateVersion int, eventType string, aggregateId uuid.UUID, issuedBy user.User) *EventBase[T] {
+func NewEventBase[T Aggregate](aggregateType AggregateType, aggregateVersion int, eventType string, aggregateId uuid.UUID, issuedBy User) *EventBase[T] {
 	return &EventBase[T]{
 		eventId:          uuid.New(),
 		eventIssuedBy:    issuedBy,
@@ -30,7 +29,7 @@ func NewEventBase[T Aggregate](aggregateType AggregateType, aggregateVersion int
 	}
 }
 
-func NewEventBaseFromRepository[T Aggregate](eventId uuid.UUID, eventType string, issuedBy user.User, issuedAt time.Time, aggregateType AggregateType, aggregateId uuid.UUID, aggregateVersion int) *EventBase[T] {
+func NewEventBaseFromRepository[T Aggregate](eventId uuid.UUID, eventType string, issuedBy User, issuedAt time.Time, aggregateType AggregateType, aggregateId uuid.UUID, aggregateVersion int) *EventBase[T] {
 	return &EventBase[T]{
 		eventId:          eventId,
 		eventIssuedBy:    issuedBy,
@@ -58,7 +57,7 @@ func (e EventBase[T]) AggregateType() AggregateType {
 	return e.aggregateType
 }
 
-func (e EventBase[T]) IssuedBy() user.User {
+func (e EventBase[T]) IssuedBy() User {
 	return e.eventIssuedBy
 }
 

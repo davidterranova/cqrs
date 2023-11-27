@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/davidterranova/cqrs/user"
 	"github.com/google/uuid"
 )
 
@@ -24,11 +23,11 @@ type EventStore[T Aggregate] interface {
 type eventStore[T Aggregate] struct {
 	repo        EventRepository
 	registry    EventRegistry[T]
-	userFactory user.UserFactory
+	userFactory UserFactory
 	withOutbox  bool
 }
 
-func NewEventStore[T Aggregate](repo EventRepository, registry EventRegistry[T], userFactory user.UserFactory, withOutbox bool) *eventStore[T] {
+func NewEventStore[T Aggregate](repo EventRepository, registry EventRegistry[T], userFactory UserFactory, withOutbox bool) *eventStore[T] {
 	return &eventStore[T]{
 		repo:        repo,
 		registry:    registry,

@@ -1,7 +1,6 @@
 package eventsourcing
 
 import (
-	"github.com/davidterranova/cqrs/user"
 	"github.com/google/uuid"
 )
 
@@ -10,7 +9,7 @@ type eventQuery struct {
 	aggregateType  *AggregateType
 	eventType      *string
 	published      *bool
-	issuedBy       user.User
+	issuedBy       User
 	limit          *int
 	orderBy        *string
 	orderDirection *string
@@ -53,7 +52,7 @@ func (eq *eventQuery) Published() *bool {
 	return eq.published
 }
 
-func (eq *eventQuery) IssuedBy() user.User {
+func (eq *eventQuery) IssuedBy() User {
 	return eq.issuedBy
 }
 
@@ -105,7 +104,7 @@ func EventQueryWithPublished(published bool) EventQueryOption {
 	}
 }
 
-func EventQueryWithIssuedBy(issuedBy user.User) EventQueryOption {
+func EventQueryWithIssuedBy(issuedBy User) EventQueryOption {
 	return func(eq *eventQuery) {
 		// if issuedBy != nil {
 		eq.issuedBy = issuedBy

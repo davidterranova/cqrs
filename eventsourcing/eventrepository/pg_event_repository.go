@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/davidterranova/cqrs/user"
-
 	"github.com/davidterranova/cqrs/eventsourcing"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -146,7 +144,7 @@ func (r pgEventRepository) MarkAs(ctx context.Context, asPublished bool, events 
 	})
 }
 
-func issuedByScope(user user.User) func(db *gorm.DB) *gorm.DB {
+func issuedByScope(user eventsourcing.User) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		if user == nil {
 			return db

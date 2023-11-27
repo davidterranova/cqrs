@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/davidterranova/cqrs/user"
 	"github.com/rs/zerolog/log"
 )
 
@@ -12,11 +11,11 @@ type EventStreamPublisher[T Aggregate] struct {
 	eventRepo     EventRepository
 	stream        Publisher[T]
 	eventRegistry EventRegistry[T]
-	userFactory   user.UserFactory
+	userFactory   UserFactory
 	batchSize     int
 }
 
-func NewEventStreamPublisher[T Aggregate](eventRepo EventRepository, eventRegistry EventRegistry[T], userFactory user.UserFactory, stream Publisher[T], batchSize int) *EventStreamPublisher[T] {
+func NewEventStreamPublisher[T Aggregate](eventRepo EventRepository, eventRegistry EventRegistry[T], userFactory UserFactory, stream Publisher[T], batchSize int) *EventStreamPublisher[T] {
 	return &EventStreamPublisher[T]{
 		eventRepo:     eventRepo,
 		eventRegistry: eventRegistry,

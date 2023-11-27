@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/davidterranova/cqrs/user"
-
 	"github.com/google/uuid"
 )
 
@@ -53,7 +51,7 @@ func toEventInternal[T Aggregate](e Event[T]) (EventInternal, error) {
 	}, nil
 }
 
-func FromEventInternalSlice[T Aggregate](internalEvents []EventInternal, registry EventRegistry[T], userFactory user.UserFactory) ([]Event[T], error) {
+func FromEventInternalSlice[T Aggregate](internalEvents []EventInternal, registry EventRegistry[T], userFactory UserFactory) ([]Event[T], error) {
 	events := make([]Event[T], 0, len(internalEvents))
 	for _, internalEvent := range internalEvents {
 		event, err := fromEventInternal(internalEvent, registry, userFactory)
@@ -66,7 +64,7 @@ func FromEventInternalSlice[T Aggregate](internalEvents []EventInternal, registr
 	return events, nil
 }
 
-func fromEventInternal[T Aggregate](internalEvent EventInternal, registry EventRegistry[T], userFactory user.UserFactory) (Event[T], error) {
+func fromEventInternal[T Aggregate](internalEvent EventInternal, registry EventRegistry[T], userFactory UserFactory) (Event[T], error) {
 	issuedBy := userFactory()
 	err := issuedBy.FromString(internalEvent.EventIssuedBy)
 	if err != nil {

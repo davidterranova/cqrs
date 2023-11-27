@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/davidterranova/cqrs/user"
 	"github.com/google/uuid"
 )
 
@@ -14,7 +13,7 @@ type Event[T Aggregate] interface {
 	AggregateType() AggregateType
 	EventType() string
 	IssuedAt() time.Time
-	IssuedBy() user.User
+	IssuedBy() User
 	Apply(*T) error
 
 	// SetBase(EventBase[T]) is used internally by eventsourcing package

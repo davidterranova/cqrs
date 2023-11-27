@@ -3,7 +3,6 @@ package eventsourcing
 import (
 	"context"
 
-	"github.com/davidterranova/cqrs/user"
 	"github.com/google/uuid"
 )
 
@@ -27,7 +26,7 @@ type EventQuery interface {
 	AggregateType() *AggregateType
 	EventType() *string
 	Published() *bool
-	IssuedBy() user.User
+	IssuedBy() User
 	Limit() *int
 	OrderBy() (*string, *string)
 	GroupBy() *string

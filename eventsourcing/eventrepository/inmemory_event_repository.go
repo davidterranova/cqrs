@@ -15,6 +15,13 @@ type inMemoryEventRepository struct {
 	outbox []inMemoryEvent
 }
 
+func NewInMemoryEventRepository() eventsourcing.EventRepository {
+	return &inMemoryEventRepository{
+		aggregateEvents: make(map[uuid.UUID][]inMemoryEvent),
+		outbox:          make([]inMemoryEvent, 0),
+	}
+}
+
 type inMemoryEvent struct {
 	event     *eventsourcing.EventInternal
 	published bool
