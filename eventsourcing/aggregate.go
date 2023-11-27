@@ -27,9 +27,12 @@ type AggregateBase[T Aggregate] struct {
 }
 
 func NewAggregateBase[T Aggregate](aggregateId uuid.UUID, version int) *AggregateBase[T] {
+	now := time.Now().UTC()
 	return &AggregateBase[T]{
 		aggregateId:      aggregateId,
 		aggregateVersion: version,
+		createdAt:        now,
+		updatedAt:        now,
 		events:           make([]Event[T], 0),
 	}
 }
