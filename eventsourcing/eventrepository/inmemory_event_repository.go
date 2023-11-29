@@ -29,6 +29,7 @@ type inMemoryEvent struct {
 
 func (r *inMemoryEventRepository) Save(_ context.Context, publishOutbox bool, events ...eventsourcing.EventInternal) error {
 	for _, e := range events {
+		e := e
 		memoryEvent := inMemoryEvent{
 			event:     &e,
 			published: false,
@@ -43,9 +44,7 @@ func (r *inMemoryEventRepository) Save(_ context.Context, publishOutbox bool, ev
 		r.aggregateEvents[aggregateId] = aggregateEvents
 
 		// outbox
-		if publishOutbox {
-			r.outbox = append(r.outbox, memoryEvent)
-		}
+		r.outbox = append(r.outbox, memoryEvent)
 	}
 
 	return nil
