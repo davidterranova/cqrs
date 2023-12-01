@@ -24,7 +24,7 @@ type EventRepository interface {
 type EventQuery interface {
 	AggregateId() *uuid.UUID
 	AggregateType() *AggregateType
-	EventType() *string
+	EventType() *EventType
 	Published() *bool
 	IssuedBy() User
 	Limit() *int

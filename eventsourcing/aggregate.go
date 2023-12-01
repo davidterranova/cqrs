@@ -12,8 +12,6 @@ type Aggregate interface {
 	AggregateId() uuid.UUID
 	AggregateType() AggregateType
 	AggregateVersion() int
-
-	IncrementVersion()
 }
 
 type AggregateBase[T Aggregate] struct {
@@ -41,26 +39,26 @@ func (a AggregateBase[T]) AggregateId() uuid.UUID {
 	return a.aggregateId
 }
 
+// Init is used to initialize an aggregate from an event
 func (a *AggregateBase[T]) Init(e Event[T]) {
 	a.aggregateId = e.AggregateId()
 	a.createdAt = e.IssuedAt()
 	a.Process(e)
 }
 
+// Delete is used to mark an aggregate as deleted from an event
 func (a *AggregateBase[T]) Delete(e Event[T]) {
 	now := e.IssuedAt()
 	a.deletedAt = &now
 	a.Process(e)
 }
 
+// Process is used to track processing of an event
 func (a *AggregateBase[T]) Process(e Event[T]) {
+	// TODO we could increment the version here and check that it matches the event version
 	a.aggregateVersion = e.AggregateVersion()
 	a.events = append(a.events, e)
 	a.updatedAt = e.IssuedAt()
-}
-
-func (a *AggregateBase[T]) IncrementVersion() {
-	a.aggregateVersion++
 }
 
 func (a AggregateBase[T]) AggregateVersion() int {

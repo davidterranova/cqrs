@@ -18,18 +18,18 @@ type InMemoryReadModel[T eventsourcing.Aggregate] struct {
 
 	aggregateFactory eventsourcing.AggregateFactory[T]
 
-	createdEvent eventsourcing.Event[T]
-	updatedEvent []eventsourcing.Event[T]
-	deletedEvent eventsourcing.Event[T]
+	createdEventType  eventsourcing.EventType
+	updatedEventTypes []eventsourcing.EventType
+	deletedEventType  eventsourcing.EventType
 }
 
-func NewInMemoryReadModel[T eventsourcing.Aggregate](eventStream eventsourcing.Subscriber[T], aggregateFactory eventsourcing.AggregateFactory[T], createdEvent eventsourcing.Event[T], deletedEvent eventsourcing.Event[T], updatedEvent ...eventsourcing.Event[T]) *InMemoryReadModel[T] {
+func NewInMemoryReadModel[T eventsourcing.Aggregate](eventStream eventsourcing.Subscriber[T], aggregateFactory eventsourcing.AggregateFactory[T], createdEventType eventsourcing.EventType, deletedEventType eventsourcing.EventType, updatedEventTypes ...eventsourcing.EventType) *InMemoryReadModel[T] {
 	rM := &InMemoryReadModel[T]{
-		aggregates:       []*T{},
-		aggregateFactory: aggregateFactory,
-		createdEvent:     createdEvent,
-		updatedEvent:     updatedEvent,
-		deletedEvent:     deletedEvent,
+		aggregates:        []*T{},
+		aggregateFactory:  aggregateFactory,
+		createdEventType:  createdEventType,
+		updatedEventTypes: updatedEventTypes,
+		deletedEventType:  deletedEventType,
 	}
 
 	if eventStream != nil {
@@ -77,12 +77,12 @@ func (rM *InMemoryReadModel[T]) HandleEvent(e eventsourcing.Event[T]) {
 }
 
 func (rM *InMemoryReadModel[T]) isCreatedEvent(e eventsourcing.Event[T]) bool {
-	return e.EventType() == rM.createdEvent.EventType()
+	return e.EventType() == rM.createdEventType
 }
 
 func (rM *InMemoryReadModel[T]) isUpdatedEvent(e eventsourcing.Event[T]) bool {
-	for _, evt := range rM.updatedEvent {
-		if evt.EventType() == e.EventType() {
+	for _, evtType := range rM.updatedEventTypes {
+		if evtType == e.EventType() {
 			return true
 		}
 	}
@@ -91,7 +91,7 @@ func (rM *InMemoryReadModel[T]) isUpdatedEvent(e eventsourcing.Event[T]) bool {
 }
 
 func (rM *InMemoryReadModel[T]) isDeletedEvent(e eventsourcing.Event[T]) bool {
-	return e.EventType() == rM.deletedEvent.EventType()
+	return e.EventType() == rM.deletedEventType
 }
 
 func (rM *InMemoryReadModel[T]) Find(_ context.Context, query AggregateMatcher[T]) ([]*T, error) {

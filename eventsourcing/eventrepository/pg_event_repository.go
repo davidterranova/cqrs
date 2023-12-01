@@ -45,7 +45,7 @@ func (r pgEventRepository) Save(ctx context.Context, publishOutbox bool, events 
 		}
 
 		for _, event := range events {
-			log.Debug().Str("type", event.EventType).Interface("event", event).Msg("stored event")
+			log.Debug().Str("type", event.EventType.String()).Interface("event", event).Msg("stored event")
 		}
 
 		if !publishOutbox {
@@ -164,7 +164,7 @@ func publishedScope(published *bool) func(db *gorm.DB) *gorm.DB {
 	}
 }
 
-func eventTypeScope(eventType *string) func(db *gorm.DB) *gorm.DB {
+func eventTypeScope(eventType *eventsourcing.EventType) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		if eventType == nil {
 			return db

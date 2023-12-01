@@ -7,7 +7,7 @@ import (
 type eventQuery struct {
 	aggregateId    *uuid.UUID
 	aggregateType  *AggregateType
-	eventType      *string
+	eventType      *EventType
 	published      *bool
 	issuedBy       User
 	limit          *int
@@ -44,7 +44,7 @@ func (eq *eventQuery) AggregateType() *AggregateType {
 	return eq.aggregateType
 }
 
-func (eq *eventQuery) EventType() *string {
+func (eq *eventQuery) EventType() *EventType {
 	return eq.eventType
 }
 
@@ -88,7 +88,7 @@ func EventQueryWithAggregateType(aggregateType AggregateType) EventQueryOption {
 	}
 }
 
-func EventQueryWithEventType(eventType string) EventQueryOption {
+func EventQueryWithEventType(eventType EventType) EventQueryOption {
 	return func(eq *eventQuery) {
 		// if eventType != nil {
 		eq.eventType = &eventType

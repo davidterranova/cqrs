@@ -39,7 +39,7 @@ func (pgEventOutbox) TableName() string {
 func toPgEvent(e eventsourcing.EventInternal) *pgEvent {
 	return &pgEvent{
 		EventId:          e.EventId,
-		EventType:        e.EventType,
+		EventType:        string(e.EventType),
 		EventIssuedAt:    e.EventIssuedAt,
 		EventIssuedBy:    e.EventIssuedBy,
 		EventData:        e.EventData,
@@ -61,7 +61,7 @@ func fromPgEventSlice(pgEvents []pgEvent) ([]eventsourcing.EventInternal, error)
 func fromPgEvent(pgEvent pgEvent) eventsourcing.EventInternal {
 	return eventsourcing.EventInternal{
 		EventId:          pgEvent.EventId,
-		EventType:        pgEvent.EventType,
+		EventType:        eventsourcing.EventType(pgEvent.EventType),
 		EventIssuedAt:    pgEvent.EventIssuedAt,
 		EventIssuedBy:    pgEvent.EventIssuedBy,
 		EventData:        pgEvent.EventData,

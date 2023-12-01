@@ -30,7 +30,7 @@ func fromEventInternalSlice(e []eventsourcing.EventInternal) []Event {
 func fromEventInternal(e eventsourcing.EventInternal) Event {
 	return Event{
 		EventId:          e.EventId,
-		EventType:        e.EventType,
+		EventType:        e.EventType.String(),
 		EventIssuedAt:    e.EventIssuedAt,
 		EventIssuedBy:    e.EventIssuedBy,
 		EventPublished:   e.EventPublished,

@@ -46,7 +46,9 @@ func (h *EventHandler[T]) ListEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if eventType != "" {
-		filter = append(filter, eventsourcing.EventQueryWithEventType(eventType))
+		filter = append(filter, eventsourcing.EventQueryWithEventType(
+			eventsourcing.EventType(eventType),
+		))
 	}
 
 	published, err := xhttp.QueryParamBool(r, "published")

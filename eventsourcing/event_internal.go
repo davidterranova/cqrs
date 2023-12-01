@@ -12,7 +12,7 @@ type EventInternal struct {
 	EventId          uuid.UUID
 	EventIssuedAt    time.Time
 	EventIssuedBy    string
-	EventType        string
+	EventType        EventType
 	EventData        []byte
 	EventPublished   bool
 	AggregateType    AggregateType

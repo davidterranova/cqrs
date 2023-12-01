@@ -11,13 +11,13 @@ type EventBase[T Aggregate] struct {
 	eventId          uuid.UUID
 	eventIssuesAt    time.Time
 	eventIssuedBy    User
-	eventType        string
+	eventType        EventType
 	aggregateType    AggregateType
 	aggregateId      uuid.UUID
 	aggregateVersion int
 }
 
-func NewEventBase[T Aggregate](aggregateType AggregateType, aggregateVersion int, eventType string, aggregateId uuid.UUID, issuedBy User) *EventBase[T] {
+func NewEventBase[T Aggregate](aggregateType AggregateType, aggregateVersion int, eventType EventType, aggregateId uuid.UUID, issuedBy User) *EventBase[T] {
 	return &EventBase[T]{
 		eventId:          uuid.New(),
 		eventIssuedBy:    issuedBy,
@@ -29,7 +29,7 @@ func NewEventBase[T Aggregate](aggregateType AggregateType, aggregateVersion int
 	}
 }
 
-func NewEventBaseFromRepository[T Aggregate](eventId uuid.UUID, eventType string, issuedBy User, issuedAt time.Time, aggregateType AggregateType, aggregateId uuid.UUID, aggregateVersion int) *EventBase[T] {
+func NewEventBaseFromRepository[T Aggregate](eventId uuid.UUID, eventType EventType, issuedBy User, issuedAt time.Time, aggregateType AggregateType, aggregateId uuid.UUID, aggregateVersion int) *EventBase[T] {
 	return &EventBase[T]{
 		eventId:          eventId,
 		eventIssuedBy:    issuedBy,
@@ -61,7 +61,7 @@ func (e EventBase[T]) IssuedBy() User {
 	return e.eventIssuedBy
 }
 
-func (e EventBase[T]) EventType() string {
+func (e EventBase[T]) EventType() EventType {
 	return e.eventType
 }
 

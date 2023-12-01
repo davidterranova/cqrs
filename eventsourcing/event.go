@@ -7,11 +7,17 @@ import (
 	"github.com/google/uuid"
 )
 
+type EventType string
+
+func (et EventType) String() string {
+	return string(et)
+}
+
 type Event[T Aggregate] interface {
 	Id() uuid.UUID
 	AggregateId() uuid.UUID
 	AggregateType() AggregateType
-	EventType() string
+	EventType() EventType
 	IssuedAt() time.Time
 	IssuedBy() User
 	Apply(*T) error

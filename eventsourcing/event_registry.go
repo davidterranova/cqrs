@@ -6,25 +6,25 @@ import (
 )
 
 type EventRegistry[T Aggregate] interface {
-	Register(eventType string, factory func() Event[T])
+	Register(eventType EventType, factory func() Event[T])
 	Hydrate(base EventBase[T], data []byte) (Event[T], error)
 }
 
 type eventRegistry[T Aggregate] struct {
-	registry map[string]func() Event[T]
+	registry map[EventType]func() Event[T]
 }
 
 func NewEventRegistry[T Aggregate]() *eventRegistry[T] {
 	return &eventRegistry[T]{
-		registry: make(map[string]func() Event[T]),
+		registry: make(map[EventType]func() Event[T]),
 	}
 }
 
-func (r *eventRegistry[T]) Register(eventType string, factory func() Event[T]) {
+func (r *eventRegistry[T]) Register(eventType EventType, factory func() Event[T]) {
 	r.registry[eventType] = factory
 }
 
-func (r eventRegistry[T]) create(eventType string) (Event[T], error) {
+func (r eventRegistry[T]) create(eventType EventType) (Event[T], error) {
 	factory, ok := r.registry[eventType]
 	if !ok {
 		return nil, ErrUnknownEventType

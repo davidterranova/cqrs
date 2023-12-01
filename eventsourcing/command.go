@@ -7,9 +7,13 @@ import (
 )
 
 type Command[T Aggregate] interface {
+	// AggregateId returns the id of the aggregate on which the command should be applied
 	AggregateId() uuid.UUID
+	// AggregateType returns the type of the aggregate on which the command should be applied
 	AggregateType() AggregateType
+	// CreatedAt returns the time at which the command was created
 	CreatedAt() time.Time
+	// IssuedBy returns the user who issued the command
 	IssuedBy() User
 
 	// Check for validity of command on aggregate, mutate the aggregate and return newly emitted events
