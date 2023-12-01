@@ -5,46 +5,38 @@ import (
 
 	"github.com/davidterranova/cqrs/eventsourcing"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 )
 
 type inMemoryEventRepository struct {
 	// events are stored by aggregate id
-	aggregateEvents map[uuid.UUID][]inMemoryEvent
+	aggregateEvents map[uuid.UUID][]*eventsourcing.EventInternal
 
 	// outbox for unpublished events
-	outbox []inMemoryEvent
+	outbox []*eventsourcing.EventInternal
 }
 
 func NewInMemoryEventRepository() eventsourcing.EventRepository {
 	return &inMemoryEventRepository{
-		aggregateEvents: make(map[uuid.UUID][]inMemoryEvent),
-		outbox:          make([]inMemoryEvent, 0),
+		aggregateEvents: make(map[uuid.UUID][]*eventsourcing.EventInternal),
+		outbox:          make([]*eventsourcing.EventInternal, 0),
 	}
-}
-
-type inMemoryEvent struct {
-	event     *eventsourcing.EventInternal
-	published bool
 }
 
 func (r *inMemoryEventRepository) Save(_ context.Context, publishOutbox bool, events ...eventsourcing.EventInternal) error {
 	for _, e := range events {
 		e := e
-		memoryEvent := inMemoryEvent{
-			event:     &e,
-			published: false,
-		}
 
 		aggregateId := e.AggregateId
 		aggregateEvents, ok := r.aggregateEvents[aggregateId]
 		if !ok {
-			aggregateEvents = make([]inMemoryEvent, 0)
+			aggregateEvents = make([]*eventsourcing.EventInternal, 0)
 		}
-		aggregateEvents = append(aggregateEvents, memoryEvent)
+		aggregateEvents = append(aggregateEvents, &e)
 		r.aggregateEvents[aggregateId] = aggregateEvents
 
 		// outbox
-		r.outbox = append(r.outbox, memoryEvent)
+		r.outbox = append(r.outbox, &e)
 	}
 
 	return nil
@@ -55,23 +47,23 @@ func (r *inMemoryEventRepository) Get(_ context.Context, filter eventsourcing.Ev
 	for _, me := range r.outbox {
 		add := true
 
-		if filter.AggregateId() != nil && *filter.AggregateId() != (*me.event).AggregateId {
+		if filter.AggregateId() != nil && *filter.AggregateId() != me.AggregateId {
 			add = false
 		}
 
-		if filter.AggregateType() != nil && *filter.AggregateType() != (*me.event).AggregateType {
+		if filter.AggregateType() != nil && *filter.AggregateType() != me.AggregateType {
 			add = false
 		}
 
-		if filter.EventType() != nil && *filter.EventType() != (*me.event).EventType {
+		if filter.EventType() != nil && *filter.EventType() != me.EventType {
 			add = false
 		}
 
-		if filter.Published() != nil && *filter.Published() != me.published {
+		if filter.Published() != nil && *filter.Published() != me.EventPublished {
 			add = false
 		}
 
-		if filter.IssuedBy() != nil && filter.IssuedBy().String() != (*me.event).EventIssuedBy {
+		if filter.IssuedBy() != nil && filter.IssuedBy().String() != me.EventIssuedBy {
 			add = false
 		}
 
@@ -87,12 +79,12 @@ func (r *inMemoryEventRepository) Get(_ context.Context, filter eventsourcing.Ev
 		// 	// TODO
 		// }
 
-		if filter.UpToVersion() != nil && (*me.event).AggregateVersion > *filter.UpToVersion() {
+		if filter.UpToVersion() != nil && me.AggregateVersion > *filter.UpToVersion() {
 			add = false
 		}
 
 		if add {
-			events = append(events, *me.event)
+			events = append(events, *me)
 		}
 	}
 
@@ -107,8 +99,8 @@ func (r *inMemoryEventRepository) GetUnpublished(_ context.Context, batchSize in
 
 	unPublished := make([]eventsourcing.EventInternal, 0, nbEvents)
 	for _, me := range r.outbox {
-		if !me.published {
-			unPublished = append(unPublished, *me.event)
+		if !me.EventPublished {
+			unPublished = append(unPublished, *me)
 		}
 	}
 
@@ -116,10 +108,12 @@ func (r *inMemoryEventRepository) GetUnpublished(_ context.Context, batchSize in
 }
 
 func (r *inMemoryEventRepository) MarkAs(_ context.Context, asPublished bool, events ...eventsourcing.EventInternal) error {
+	log.Info().Int("nb_events", len(events)).Bool("published", asPublished).Msg("marking events as")
 	for _, e := range events {
 		for _, me := range r.outbox {
-			if (*me.event).AggregateId == e.AggregateId {
-				me.published = asPublished
+			if me.EventId == e.EventId {
+				log.Info().Str("event_id", me.EventId.String()).Str("event_type", string(me.EventType)).Bool("as published", asPublished).Msg("marking event")
+				me.EventPublished = asPublished
 			}
 		}
 	}
