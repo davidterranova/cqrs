@@ -10,7 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const eventTypeNil eventsourcing.EventType = "event_type_nil"
+const (
+	eventTypeNil               eventsourcing.EventType     = "event_type_nil"
+	testAggregateAggregateType eventsourcing.AggregateType = "test_aggregate"
+)
 
 type testAggregate struct {
 	*eventsourcing.AggregateBase[testAggregate]
@@ -18,7 +21,7 @@ type testAggregate struct {
 }
 
 func (t testAggregate) AggregateType() eventsourcing.AggregateType {
-	return "test_aggregate"
+	return testAggregateAggregateType
 }
 
 func newTestAggregate() *testAggregate {
@@ -120,5 +123,94 @@ func TestInMemoryReadModelEventMatcher(t *testing.T) {
 		)
 		require.NoError(t, err)
 		assert.Len(t, matchedAggregates, 0)
+	})
+}
+
+const (
+	evtTypeTestAggregateCreated  eventsourcing.EventType = "testAggregate.created"
+	evtTypeTestAggregateValueSet eventsourcing.EventType = "testAggregate.value-set"
+)
+
+type evtTestAggregateCreated struct {
+	*eventsourcing.EventBase[testAggregate]
+}
+
+func newEvtTestAggregateCreated(aggregateId uuid.UUID, aggregateVersion int, issuedBy eventsourcing.User) *evtTestAggregateCreated {
+	return &evtTestAggregateCreated{
+		EventBase: eventsourcing.NewEventBase[testAggregate](
+			testAggregateAggregateType,
+			aggregateVersion,
+			evtTypeTestAggregateCreated,
+			aggregateId,
+			issuedBy,
+		),
+	}
+}
+
+func (e evtTestAggregateCreated) Apply(a *testAggregate) error {
+	a.Init(e)
+
+	return nil
+}
+
+type evtTestAggregateValueSet struct {
+	*eventsourcing.EventBase[testAggregate]
+	value int
+}
+
+func newEvtTestAggregateValueSet(aggregateId uuid.UUID, aggregateVersion int, issuedBy eventsourcing.User, value int) *evtTestAggregateValueSet {
+	return &evtTestAggregateValueSet{
+		EventBase: eventsourcing.NewEventBase[testAggregate](
+			testAggregateAggregateType,
+			aggregateVersion,
+			evtTypeTestAggregateValueSet,
+			aggregateId,
+			issuedBy,
+		),
+		value: value,
+	}
+}
+
+func (e evtTestAggregateValueSet) Apply(a *testAggregate) error {
+	a.Process(e)
+	a.value = e.value
+
+	return nil
+}
+
+func TestInMemoryReadModelHandleEvent(t *testing.T) {
+	rm := NewInMemoryReadModel(nil, newTestAggregate, evtTypeTestAggregateCreated, eventTypeNil, evtTypeTestAggregateValueSet)
+
+	// issuer := domain.NewUser()
+	aggregateId1 := uuid.New()
+	aggregateId2 := uuid.New()
+	events := []eventsourcing.Event[testAggregate]{
+		newEvtTestAggregateCreated(aggregateId1, 0, nil),
+		newEvtTestAggregateValueSet(aggregateId1, 1, nil, 1),
+		newEvtTestAggregateValueSet(aggregateId1, 2, nil, 2),
+		newEvtTestAggregateCreated(aggregateId2, 0, nil),
+		newEvtTestAggregateValueSet(aggregateId2, 1, nil, 5),
+	}
+
+	for _, e := range events {
+		rm.HandleEvent(e)
+	}
+
+	t.Run("check number of aggregates", func(t *testing.T) {
+		assert.Len(t, rm.aggregates, 2)
+	})
+
+	t.Run("check aggregate 1", func(t *testing.T) {
+		agg, err := rm.Get(context.Background(), AggregateMatcherAggregateId[testAggregate](&aggregateId1))
+		require.NoError(t, err)
+		assert.Equal(t, aggregateId1, agg.AggregateId())
+		assert.Equal(t, 2, agg.value)
+	})
+
+	t.Run("check aggregate 2", func(t *testing.T) {
+		agg, err := rm.Get(context.Background(), AggregateMatcherAggregateId[testAggregate](&aggregateId2))
+		require.NoError(t, err)
+		assert.Equal(t, aggregateId2, agg.AggregateId())
+		assert.Equal(t, 5, agg.value)
 	})
 }
