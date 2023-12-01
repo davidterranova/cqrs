@@ -23,7 +23,13 @@ type InMemoryReadModel[T eventsourcing.Aggregate] struct {
 	deletedEventType  eventsourcing.EventType
 }
 
-func NewInMemoryReadModel[T eventsourcing.Aggregate](eventStream eventsourcing.Subscriber[T], aggregateFactory eventsourcing.AggregateFactory[T], createdEventType eventsourcing.EventType, deletedEventType eventsourcing.EventType, updatedEventTypes ...eventsourcing.EventType) *InMemoryReadModel[T] {
+func NewInMemoryReadModel[T eventsourcing.Aggregate](
+	eventStream eventsourcing.Subscriber[T],
+	aggregateFactory eventsourcing.AggregateFactory[T],
+	createdEventType eventsourcing.EventType,
+	deletedEventType eventsourcing.EventType,
+	updatedEventTypes ...eventsourcing.EventType,
+) *InMemoryReadModel[T] {
 	rM := &InMemoryReadModel[T]{
 		aggregates:        []*T{},
 		aggregateFactory:  aggregateFactory,
@@ -126,8 +132,12 @@ func (rM *InMemoryReadModel[T]) findAggregates(matcher AggregateMatcher[T]) []*T
 	rM.RLock()
 	defer rM.RUnlock()
 
+	if matcher == nil {
+		return rM.aggregates
+	}
+
 	for _, t := range rM.aggregates {
-		if matcher == nil || matcher(t) {
+		if matcher(t) {
 			aggs = append(aggs, t)
 		}
 	}
@@ -149,7 +159,7 @@ func AggregateMatcherAnd[T eventsourcing.Aggregate](matchers ...AggregateMatcher
 
 func AggregateMatcherOr[T eventsourcing.Aggregate](matchers ...AggregateMatcher[T]) AggregateMatcher[T] {
 	return func(p *T) bool {
-		valid := true
+		valid := false
 		for _, m := range matchers {
 			curr := m(p)
 			valid = valid || curr
