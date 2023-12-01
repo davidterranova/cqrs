@@ -80,6 +80,8 @@ func (rM *InMemoryReadModel[T]) HandleEvent(e eventsourcing.Event[T]) {
 	default:
 		log.Error().Err(ErrUnknownEvent).Msgf("unknown event %s.%s", e.AggregateType(), e.EventType())
 	}
+
+	log.Debug().Str("event_id", e.Id().String()).Str("event_type", e.EventType().String()).Msg("read_model event applied")
 }
 
 func (rM *InMemoryReadModel[T]) isCreatedEvent(e eventsourcing.Event[T]) bool {

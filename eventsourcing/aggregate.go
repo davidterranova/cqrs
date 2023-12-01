@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 )
 
 type AggregateType string
@@ -59,6 +60,13 @@ func (a *AggregateBase[T]) Process(e Event[T]) {
 	a.aggregateVersion = e.AggregateVersion()
 	a.events = append(a.events, e)
 	a.updatedAt = e.IssuedAt()
+	log.Debug().
+		Str("aggregate_id", e.AggregateId().String()).
+		Int("aggregate_version", a.AggregateVersion()).
+		Str("aggregate_type", string(e.AggregateType())).
+		Str("event_type", string(e.EventType())).
+		Str("event_id", string(e.Id().String())).
+		Msg("processing event")
 }
 
 func (a AggregateBase[T]) AggregateVersion() int {

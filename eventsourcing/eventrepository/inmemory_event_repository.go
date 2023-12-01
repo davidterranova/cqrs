@@ -108,11 +108,11 @@ func (r *inMemoryEventRepository) GetUnpublished(_ context.Context, batchSize in
 }
 
 func (r *inMemoryEventRepository) MarkAs(_ context.Context, asPublished bool, events ...eventsourcing.EventInternal) error {
-	log.Info().Int("nb_events", len(events)).Bool("published", asPublished).Msg("marking events as")
+	log.Debug().Int("nb_events", len(events)).Bool("published", asPublished).Msg("marking events as")
 	for _, e := range events {
 		for _, me := range r.outbox {
 			if me.EventId == e.EventId {
-				log.Info().Str("event_id", me.EventId.String()).Str("event_type", string(me.EventType)).Bool("as published", asPublished).Msg("marking event")
+				log.Debug().Str("event_id", me.EventId.String()).Str("event_type", string(me.EventType)).Bool("as published", asPublished).Msg("marking event")
 				me.EventPublished = asPublished
 			}
 		}
