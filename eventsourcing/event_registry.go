@@ -27,7 +27,7 @@ func (r *eventRegistry[T]) Register(eventType EventType, factory func() Event[T]
 func (r eventRegistry[T]) create(eventType EventType) (Event[T], error) {
 	factory, ok := r.registry[eventType]
 	if !ok {
-		return nil, ErrUnknownEventType
+		return nil, fmt.Errorf("%w: event type %s not registered", ErrUnknownEventType, eventType)
 	}
 
 	return factory(), nil
