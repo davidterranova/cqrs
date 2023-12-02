@@ -20,15 +20,15 @@ type Command[T Aggregate] interface {
 	Apply(*T) ([]Event[T], error)
 }
 
-type BaseCommand[T Aggregate] struct {
+type CommandBase[T Aggregate] struct {
 	BCAggregateId   uuid.UUID     `validate:"required"`
 	BCAggregateType AggregateType `validate:"required"`
 	BCCreatedAt     time.Time     `validate:"required"`
 	BCIssuedBy      User          `validate:"required"`
 }
 
-func NewBaseCommand[T Aggregate](aggregateId uuid.UUID, aggregateType AggregateType, issuedBy User) BaseCommand[T] {
-	return BaseCommand[T]{
+func NewCommandBase[T Aggregate](aggregateId uuid.UUID, aggregateType AggregateType, issuedBy User) CommandBase[T] {
+	return CommandBase[T]{
 		BCAggregateId:   aggregateId,
 		BCAggregateType: aggregateType,
 		BCIssuedBy:      issuedBy,
@@ -36,18 +36,18 @@ func NewBaseCommand[T Aggregate](aggregateId uuid.UUID, aggregateType AggregateT
 	}
 }
 
-func (c BaseCommand[T]) AggregateId() uuid.UUID {
+func (c CommandBase[T]) AggregateId() uuid.UUID {
 	return c.BCAggregateId
 }
 
-func (c BaseCommand[T]) AggregateType() AggregateType {
+func (c CommandBase[T]) AggregateType() AggregateType {
 	return c.BCAggregateType
 }
 
-func (c BaseCommand[T]) CreatedAt() time.Time {
+func (c CommandBase[T]) CreatedAt() time.Time {
 	return c.BCCreatedAt
 }
 
-func (c BaseCommand[T]) IssuedBy() User {
+func (c CommandBase[T]) IssuedBy() User {
 	return c.BCIssuedBy
 }
