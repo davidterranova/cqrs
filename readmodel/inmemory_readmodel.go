@@ -82,6 +82,8 @@ func (rM *InMemoryReadModel[T]) HandleEvent(e eventsourcing.Event[T]) {
 			log.Error().Err(err).Msgf("error applying event %s on %s %q", e.EventType(), e.AggregateType(), e.AggregateId())
 			return
 		}
+	case rM.isNilEvent(e):
+		// no op
 	default:
 		log.Error().Err(ErrUnknownEvent).Msgf("unknown event %s.%s", e.AggregateType(), e.EventType())
 	}
@@ -105,6 +107,10 @@ func (rM *InMemoryReadModel[T]) isUpdatedEvent(e eventsourcing.Event[T]) bool {
 
 func (rM *InMemoryReadModel[T]) isDeletedEvent(e eventsourcing.Event[T]) bool {
 	return e.EventType() == rM.deletedEventType
+}
+
+func (rM *InMemoryReadModel[T]) isNilEvent(e eventsourcing.Event[T]) bool {
+	return e.EventType() == eventsourcing.EvtTypeNil
 }
 
 func (rM *InMemoryReadModel[T]) Find(_ context.Context, query AggregateMatcher[T]) ([]*T, error) {

@@ -7,11 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type EventType string
-
-func (et EventType) String() string {
-	return string(et)
-}
+const EvtTypeNil EventType = "-"
 
 type Event[T Aggregate] interface {
 	Id() uuid.UUID
@@ -25,6 +21,12 @@ type Event[T Aggregate] interface {
 	// SetBase(EventBase[T]) is used internally by eventsourcing package
 	SetBase(EventBase[T])
 	AggregateVersion() int
+}
+
+type EventType string
+
+func (et EventType) String() string {
+	return string(et)
 }
 
 type IEventRepository interface {
