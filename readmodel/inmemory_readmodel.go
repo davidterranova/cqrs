@@ -46,6 +46,11 @@ func NewInMemoryReadModel[T eventsourcing.Aggregate](
 }
 
 func (rM *InMemoryReadModel[T]) HandleEvent(e eventsourcing.Event[T]) {
+	log.Debug().
+		Str("event_type", e.EventType().String()).
+		Str("aggregate_type", string(e.AggregateType())).
+		Str("aggregate_id", e.AggregateId().String()).
+		Msg("read_model: handling event")
 	switch {
 	case rM.isCreatedEvent(e):
 		t := rM.aggregateFactory()

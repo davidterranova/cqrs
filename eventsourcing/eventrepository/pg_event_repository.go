@@ -34,6 +34,7 @@ func (r pgEventRepository) Save(ctx context.Context, publishOutbox bool, events 
 		outboxEntries = append(outboxEntries, &pgEventOutbox{
 			EventId:          event.EventId,
 			Published:        false,
+			AggregateType:    string(event.AggregateType),
 			AggregateVersion: event.AggregateVersion,
 		})
 	}
@@ -97,12 +98,13 @@ func (r pgEventRepository) Get(ctx context.Context, filter eventsourcing.EventQu
 	return events, nil
 }
 
-func (r pgEventRepository) GetUnpublished(ctx context.Context, batchSize int) ([]eventsourcing.EventInternal, error) {
+func (r pgEventRepository) GetUnpublished(ctx context.Context, aggregateType eventsourcing.AggregateType, batchSize int) ([]eventsourcing.EventInternal, error) {
 	var pgOutboxEntries []uuid.UUID
 	err := r.db.
 		WithContext(ctx).
 		Model(&pgEventOutbox{}).
 		Where("published = ?", false).
+		Where("aggregate_type = ?", aggregateType).
 		Group("event_id").
 		Order("aggregate_version ASC").
 		Limit(batchSize).
@@ -117,13 +119,21 @@ func (r pgEventRepository) GetUnpublished(ctx context.Context, batchSize int) ([
 	}
 
 	var unpublishedEvents []pgEvent
-	err = r.db.WithContext(ctx).Where("event_id IN ?", pgOutboxEntries).Find(&unpublishedEvents).Error
+	err = r.db.
+		WithContext(ctx).
+		Where("event_id IN ?", pgOutboxEntries).
+		Find(&unpublishedEvents).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to load unpublished events: %w", err)
 	}
 
 	for _, event := range unpublishedEvents {
-		log.Debug().Str("type", event.EventType).Interface("event", event).Msg("loaded unpublished event")
+		log.Debug().
+			Str("event_type", event.EventType).
+			Str("event_id", event.EventId.String()).
+			Str("aggregate_type", string(event.AggregateType)).
+			Str("aggregate_id", event.AggregateId.String()).
+			Msg("loaded unpublished event")
 	}
 
 	return fromPgEventSlice(unpublishedEvents)

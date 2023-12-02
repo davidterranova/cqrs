@@ -16,7 +16,7 @@ type EventRepository interface {
 	Get(ctx context.Context, filter EventQuery) ([]EventInternal, error)
 
 	// load events from outbox that have not been published yet
-	GetUnpublished(ctx context.Context, batchSize int) ([]EventInternal, error)
+	GetUnpublished(ctx context.Context, aggregateType AggregateType, batchSize int) ([]EventInternal, error)
 	// MarkAs marks events as published / unpublished
 	MarkAs(ctx context.Context, asPublished bool, events ...EventInternal) error
 }

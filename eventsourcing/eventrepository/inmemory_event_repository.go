@@ -26,6 +26,12 @@ func NewInMemoryEventRepository() eventsourcing.EventRepository {
 func (r *inMemoryEventRepository) Save(_ context.Context, publishOutbox bool, events ...eventsourcing.EventInternal) error {
 	for _, e := range events {
 		e := e
+		log.Debug().
+			Str("event_id", e.EventId.String()).
+			Str("event_type", string(e.EventType)).
+			Str("aggregate_type", string(e.AggregateType)).
+			Str("aggregate_id", e.AggregateId.String()).
+			Msg("event repository: saving event")
 
 		aggregateId := e.AggregateId
 		aggregateEvents, ok := r.aggregateEvents[aggregateId]
@@ -91,7 +97,7 @@ func (r *inMemoryEventRepository) Get(_ context.Context, filter eventsourcing.Ev
 	return events, nil
 }
 
-func (r *inMemoryEventRepository) GetUnpublished(_ context.Context, batchSize int) ([]eventsourcing.EventInternal, error) {
+func (r *inMemoryEventRepository) GetUnpublished(_ context.Context, aggregateType eventsourcing.AggregateType, batchSize int) ([]eventsourcing.EventInternal, error) {
 	nbEvents := len(r.outbox)
 	if batchSize < nbEvents {
 		nbEvents = batchSize
@@ -99,7 +105,13 @@ func (r *inMemoryEventRepository) GetUnpublished(_ context.Context, batchSize in
 
 	unPublished := make([]eventsourcing.EventInternal, 0, nbEvents)
 	for _, me := range r.outbox {
-		if !me.EventPublished {
+		if !me.EventPublished && me.AggregateType == aggregateType {
+			log.Debug().
+				Str("event_type", string(me.EventType)).
+				Str("event_id", me.EventId.String()).
+				Str("aggregate_type", string(me.AggregateType)).
+				Str("aggregate_id", me.AggregateId.String()).
+				Msg("event repository: loading unpublished event")
 			unPublished = append(unPublished, *me)
 		}
 	}
@@ -108,11 +120,19 @@ func (r *inMemoryEventRepository) GetUnpublished(_ context.Context, batchSize in
 }
 
 func (r *inMemoryEventRepository) MarkAs(_ context.Context, asPublished bool, events ...eventsourcing.EventInternal) error {
-	log.Debug().Int("nb_events", len(events)).Bool("published", asPublished).Msg("marking events as")
+	log.Debug().
+		Int("nb_events", len(events)).
+		Bool("published", asPublished).
+		Msg("marking events as")
 	for _, e := range events {
 		for _, me := range r.outbox {
 			if me.EventId == e.EventId {
-				log.Debug().Str("event_id", me.EventId.String()).Str("event_type", string(me.EventType)).Bool("as published", asPublished).Msg("marking event")
+				log.Debug().
+					Str("event_id", me.EventId.String()).
+					Str("event_type", string(me.EventType)).
+					Str("aggregate_type", string(me.AggregateType)).
+					Bool("published", asPublished).
+					Msg("event repository: marking event as")
 				me.EventPublished = asPublished
 			}
 		}

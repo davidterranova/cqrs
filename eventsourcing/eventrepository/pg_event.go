@@ -29,6 +29,7 @@ func (pgEvent) TableName() string {
 type pgEventOutbox struct {
 	EventId          uuid.UUID `gorm:"type:uuid;primaryKey;column:event_id"`
 	Published        bool      `gorm:"column:published"`
+	AggregateType    string    `gorm:"type:varchar(255);column:aggregate_type"`
 	AggregateVersion int       `gorm:"column:aggregate_version"`
 }
 
