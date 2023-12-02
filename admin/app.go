@@ -2,7 +2,7 @@ package admin
 
 import (
 	"context"
-	"fmt"
+	"time"
 
 	"github.com/davidterranova/cqrs/admin/usecase"
 	"github.com/davidterranova/cqrs/eventsourcing"
@@ -22,10 +22,11 @@ func NewApp[T eventsourcing.Aggregate](eventRepository eventsourcing.EventReposi
 	// set to false to disable CQRS and remain in eventsourcing context
 	CQRS := true
 	eventstore := eventsourcing.NewEventStore[T](eventRepository, registry, userFactory, CQRS)
-	commandHandler, err := eventsourcing.NewCommandHandler[T](eventstore, factory, 100)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create command handler: %w", err)
-	}
+	commandHandler := eventsourcing.NewCommandHandler[T](
+		eventstore,
+		factory,
+		eventsourcing.CacheOption{Disabled: true, Size: 100, TTL: 30 * time.Second},
+	)
 
 	return &App[T]{
 		listEvent: usecase.NewListEventHandler(eventRepository),
