@@ -70,7 +70,7 @@ func NewCacheLogger[K comparable, V any](cache Cache[K, V]) Cache[K, V] {
 
 func (c *cacheLogger[K, V]) Add(key K, value V) bool {
 	log.Info().
-		Str("key", fmt.Sprintf("%s", key)).
+		Str("key", fmt.Sprintf("%v", key)).
 		Msg("cache add")
 	return c.cache.Add(key, value)
 }
@@ -78,7 +78,7 @@ func (c *cacheLogger[K, V]) Add(key K, value V) bool {
 func (c *cacheLogger[K, V]) Get(key K) (V, bool) {
 	v, ok := c.cache.Get(key)
 	log.Info().
-		Str("key", fmt.Sprintf("%s", key)).
+		Str("key", fmt.Sprintf("%v", key)).
 		Bool("ok", ok).
 		Msg("cache get")
 

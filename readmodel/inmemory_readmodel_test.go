@@ -43,10 +43,11 @@ func aggregateMatcherTestAggregateValue(value *int) AggregateMatcher[testAggrega
 			return true
 		}
 
-		return (*p).value == *value
+		return p.value == *value
 	}
 }
 
+//nolint:funlen
 func TestInMemoryReadModelEventMatcher(t *testing.T) {
 	ctx := context.Background()
 	rm := NewInMemoryReadModel(nil, newTestAggregate, eventTypeNil, eventTypeNil, eventTypeNil)

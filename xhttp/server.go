@@ -2,6 +2,7 @@ package xhttp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -56,7 +57,7 @@ func (s Server) Serve(ctx context.Context) error {
 
 	go func() {
 		err := srv.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.
 				Fatal().
 				Err(err).
@@ -75,8 +76,8 @@ func (s Server) Serve(ctx context.Context) error {
 	defer cancel()
 
 	err := srv.Shutdown(ctxShutDown)
-	if err != nil && err != http.ErrServerClosed {
-		return fmt.Errorf("failed to shutdown http server properly: %s", err)
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("failed to shutdown http server properly: %w", err)
 	}
 
 	return nil

@@ -48,6 +48,7 @@ func (r *inMemoryEventRepository) Save(_ context.Context, publishOutbox bool, ev
 	return nil
 }
 
+//nolint:cyclop
 func (r *inMemoryEventRepository) Get(_ context.Context, filter eventsourcing.EventQuery) ([]eventsourcing.EventInternal, error) {
 	events := make([]eventsourcing.EventInternal, 0)
 	for _, me := range r.outbox {
