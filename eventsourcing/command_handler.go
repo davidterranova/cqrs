@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/rs/zerolog/log"
 )
 
 // CommandHandler should be used by the application to handle commands
@@ -39,13 +41,24 @@ type AggregateFactory[T Aggregate] func() *T
 type commandHandler[T Aggregate] struct {
 	eventStore EventStore[T]
 	factory    AggregateFactory[T]
+	lru        *lru.Cache[uuid.UUID, *T]
 }
 
-func NewCommandHandler[T Aggregate](eventStore EventStore[T], factory AggregateFactory[T]) *commandHandler[T] {
-	return &commandHandler[T]{
+func NewCommandHandler[T Aggregate](eventStore EventStore[T], factory AggregateFactory[T], cacheSize int) (*commandHandler[T], error) {
+	var err error
+	cmdHandler := &commandHandler[T]{
 		eventStore: eventStore,
 		factory:    factory,
 	}
+
+	if cacheSize > 0 {
+		cmdHandler.lru, err = lru.New[uuid.UUID, *T](cacheSize)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create command handler cache: %w", err)
+		}
+	}
+
+	return cmdHandler, nil
 }
 
 func (h *commandHandler[T]) HandleCommand(ctx context.Context, c Command[T]) (*T, error) {
@@ -67,6 +80,11 @@ func (h *commandHandler[T]) HandleCommand(ctx context.Context, c Command[T]) (*T
 		return new(T), fmt.Errorf("failed to apply events to aggregate(%s#%s): %w", c.AggregateType(), c.AggregateId(), err)
 	}
 
+	// update cache
+	if h.lru != nil {
+		h.lru.Add(c.AggregateId(), aggregate)
+	}
+
 	// persist and publish events
 	err = h.PersistEvents(ctx, events...)
 	if err != nil {
@@ -78,6 +96,23 @@ func (h *commandHandler[T]) HandleCommand(ctx context.Context, c Command[T]) (*T
 }
 
 func (h *commandHandler[T]) HydrateAggregate(ctx context.Context, aggregateType AggregateType, aggregateId uuid.UUID) (*T, error) {
+	// check if aggregate is in cache
+	if h.lru != nil {
+		agg, ok := h.lru.Get(aggregateId)
+		if ok {
+			log.Info().
+				Str("aggregate_type", string(aggregateType)).
+				Str("aggregate_id", aggregateId.String()).
+				Msg("load aggregate from cache")
+			return agg, nil
+		}
+	}
+
+	// load from event store
+	log.Info().
+		Str("aggregate_type", string(aggregateType)).
+		Str("aggregate_id", aggregateId.String()).
+		Msg("load aggregate from eventstore")
 	events, err := h.eventStore.Load(ctx, aggregateType, aggregateId)
 	if err != nil {
 		return new(T), fmt.Errorf("failed to load events for aggregate(%s#%s): %w", aggregateType, aggregateId, err)

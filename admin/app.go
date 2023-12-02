@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/davidterranova/cqrs/admin/usecase"
 	"github.com/davidterranova/cqrs/eventsourcing"
@@ -17,30 +18,26 @@ type App[T eventsourcing.Aggregate] struct {
 	republishAggregate *usecase.RepublishAggregateHandler[T]
 }
 
-func NewwApp[T eventsourcing.Aggregate](listEvent *usecase.ListEventHandler, loadAggregate *usecase.LoadAggregateHandler[T], republishAggregate *usecase.RepublishAggregateHandler[T]) *App[T] {
-	return &App[T]{
-		listEvent:          listEvent,
-		loadAggregate:      loadAggregate,
-		republishAggregate: republishAggregate,
-	}
-}
-
-func NewApp[T eventsourcing.Aggregate](eventRepository eventsourcing.EventRepository, registry eventsourcing.EventRegistry[T], userFactory eventsourcing.UserFactory, aggregateType eventsourcing.AggregateType, factory eventsourcing.AggregateFactory[T]) *App[T] {
+func NewApp[T eventsourcing.Aggregate](eventRepository eventsourcing.EventRepository, registry eventsourcing.EventRegistry[T], userFactory eventsourcing.UserFactory, aggregateType eventsourcing.AggregateType, factory eventsourcing.AggregateFactory[T]) (*App[T], error) {
 	// set to false to disable CQRS and remain in eventsourcing context
 	CQRS := true
 	eventstore := eventsourcing.NewEventStore[T](eventRepository, registry, userFactory, CQRS)
+	commandHandler, err := eventsourcing.NewCommandHandler[T](eventstore, factory, 100)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create command handler: %w", err)
+	}
 
 	return &App[T]{
 		listEvent: usecase.NewListEventHandler(eventRepository),
 		loadAggregate: usecase.NewLoadAggregateHandler[T](
-			eventsourcing.NewCommandHandler[T](eventstore, factory),
+			commandHandler,
 			eventRepository,
 			registry,
 			userFactory,
 			aggregateType,
 		),
 		republishAggregate: usecase.NewRepublishAggregateHandler[T](eventRepository), // should be set to nil if CQRS is disabled
-	}
+	}, nil
 }
 
 func (a *App[T]) ListEvent(ctx context.Context, filter eventsourcing.EventQuery) ([]eventsourcing.EventInternal, error) {
