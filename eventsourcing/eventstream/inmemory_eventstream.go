@@ -15,6 +15,8 @@ type eventStream[T eventsourcing.Aggregate] struct {
 	ctx         context.Context
 }
 
+// NewInMemoryPubSub creates a new in-memory event stream
+// buffer is the size of the channel buffer
 func NewInMemoryPubSub[T eventsourcing.Aggregate](ctx context.Context, buffer int) *eventStream[T] {
 	p := &eventStream[T]{
 		ctx:         ctx,

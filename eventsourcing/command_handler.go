@@ -43,6 +43,9 @@ type commandHandler[T Aggregate] struct {
 	cache      Cache[uuid.UUID, *T]
 }
 
+// NewCommandHandler creates a new command handler
+// cacheOption is used to configure the command handler cache and reduce the number of calls to the event store
+// if cacheOption.Disabled is set to true, the cache will be disabled
 func NewCommandHandler[T Aggregate](eventStore EventStore[T], factory AggregateFactory[T], cacheOption CacheOption) *commandHandler[T] {
 	cmdHandler := &commandHandler[T]{
 		eventStore: eventStore,
