@@ -1,5 +1,5 @@
 # CQRS
-Generic Eventsourcing / CQRS implementation in Go with a focus on simplicity
+Generic Eventsourcing / CQRS implementation in Go 
 
 ## Write model: creating a new aggregate
 
@@ -7,20 +7,30 @@ Generic Eventsourcing / CQRS implementation in Go with a focus on simplicity
    ```go
    const GroupAggregateType eventsourcing.AggregateType = "group"
 
+   // Group is the aggregate root
    type Group struct {
      *eventsourcing.AggregateBase[Group]
 
+     // it has a name property that is private to make sure it is only updated 
+     // through domain events
      name string
    }
 
+   // NewGroup is creates a new Group aggregate
    func NewGroup() *Group {
       return &Group{
         AggregateBase: eventsourcing.NewAggregateBase[Group](uuid.Nil, 0),
       }
     }
 
+   // AggregateType is required to implement the Aggregate interface
    func (g Group) AggregateType() eventsourcing.AggregateType {
      return GroupAggregateType
+   }
+
+   // Name makes the name property accessible
+   func (g Group) Name() string {
+     return g.name
    }
    ```
 
@@ -28,18 +38,27 @@ Generic Eventsourcing / CQRS implementation in Go with a focus on simplicity
    ```go
    const EvtTypeGroupCreated       eventsourcing.EventType = "group.created"
 
+   // RegisterGroupEvents registers events so they can be hydrated from the event store
    func RegisterGroupEvents(registry eventsourcing.EventRegistry[Group]) {
       registry.Register(EvtTypeGroupCreated, func() eventsourcing.Event[Group] {
         return &EvtGroupCreated{
           EventBase: &eventsourcing.EventBase[Group]{},
         }
       })
+      registry.Register(EvtTypeGroupNameSet, func() eventsourcing.Event[Group] {
+        return &EvtGroupNameSet{
+          EventBase: &eventsourcing.EventBase[Group]{},
+        }
+      })
     }
 
+    // EvtGroupCreated is emitted when a group is created
     type EvtGroupCreated struct {
       *eventsourcing.EventBase[Group]
     }
 
+    // NewEvtGroupCreated is a helper to create a new EvtGroupCreated event 
+    // with the appropriate event base
     func NewEvtGroupCreated(aggregateId uuid.UUID, aggregateVersion int, createdBy eventsourcing.User) *EvtGroupCreated {
       return &EvtGroupCreated{
         EventBase: eventsourcing.NewEventBase[Group](
@@ -52,23 +71,54 @@ Generic Eventsourcing / CQRS implementation in Go with a focus on simplicity
       }
     }
 
+    // Apply performs the changes on the aggregate
     func (e EvtGroupCreated) Apply(g *Group) error {
+      // helper to define the aggregate base properties (created_at, ..)
+      // on creation event we call init instead of process
       g.Init(e)
+
+      return nil
+    }
+
+    // EvtGroupNameSet is emitted when name is set
+    type EvtGroupNameSet struct {
+      *eventsourcing.EventBase[Group]
+      name string
+    }
+
+    func NewEvtGroupNameSet(aggregateId uuid.UUID, aggregateVersion int, updatedBy eventsourcing.User, name string) *EvtGroupNameSet {
+      return &EvtGroupNameSet{
+        EventBase: eventsourcing.NewEventBase[Group](
+          GroupAggregateType,
+          aggregateVersion,
+          EvtTypeGroupNameSet,
+          aggregateId,
+          updatedBy,
+        ),
+        name: name,
+      }
+    }
+
+    func (e EvtGroupNameSet) Apply(g *Group) error {
+      // helper to define the aggregate base properties (modified_at, ..)
+      g.Process(e)
+      // update the aggregate name
+      g.name = e.name
 
       return nil
     }
    ```
 3. Create use case
    ```go
-   type CmdCreate struct {
-      Name string
-    }
-
+    // cmdCreate is the command to create a new group
     type cmdCreate struct {
+      // to make cmdCreate a command
       eventsourcing.CommandBase[domain.Group]
-      CmdCreate
+      // Name the property of the command
+      Name string `validate:"required"`
     }
 
+    // CreateHandler is the usecase handler 
     type CreateHandler struct {
       validator      *validator.Validate
       commandHandler eventsourcing.CommandHandler[domain.Group]
@@ -83,45 +133,43 @@ Generic Eventsourcing / CQRS implementation in Go with a focus on simplicity
       }
     }
 
-    func (h CreateHandler) Create(ctx context.Context, issuer eventsourcing.User, cmd CmdCreate) (*domain.Group, error) {
-      err := h.Validate(cmd)
+    func (h CreateHandler) Create(ctx context.Context, issuer eventsourcing.User, name string) (*domain.Group, error) {
+      // let's validate the command
+      err := h.validator.Struct(cmd)
       if err != nil {
         log.Error().Err(err).Msg("create: invalid command")
         return nil, err
       }
 
-      // check if possible to create a group for this issuer
+      // we return an error if the command should not be accepted
+      // business logic to check if the command is valid should be implemented here
+      // like checking if it is possible to create a group for this issuer
 
-      internalCmd := cmdCreate{
-        CommandBase: eventsourcing.NewCommandBase[domain.Group](
-          uuid.New(),
-          domain.AggregateGroup,
-          issuer,
-        ),
-        CmdCreate: cmd,
-      }
-
-      return h.commandHandler.HandleCommand(ctx, internalCmd)
+      return h.commandHandler.HandleCommand(
+        ctx, 
+        cmdCreate{
+          CommandBase: eventsourcing.NewCommandBase[domain.Group](
+            uuid.New(), // new aggregate id
+            domain.AggregateGroup, // aggregate type
+            issuer, // tracking who did create that group
+          ),
+          Name: name,
+        },  
+      )
     }
 
-    func (h CreateHandler) Validate(cmd CmdCreate) error {
-      return h.validator.Struct(cmd)
-    }
-
+    // Apply returns a list of events that should be emitted when the command is applied
     func (c cmdCreate) Apply(aggregate *domain.Group) ([]eventsourcing.Event[domain.Group], error) {
-      err := eventsourcing.EnsureNewAggregate(aggregate)
-      if err != nil {
-        return nil, fmt.Errorf("create group: %w", err)
-      }
-
-      events := []eventsourcing.Event[domain.Group]{
+      return []eventsourcing.Event[domain.Group]{
+        // the new group is created
         domain.NewEvtGroupCreated(c.AggregateId(), 0, c.IssuedBy()),
+        // the name is set
         domain.NewEvtGroupNameSet(c.AggregateId(), 1, c.IssuedBy(), c.Name),
-      }
-
-      return events, nil
+      }, nil
     }
    ```
+
+   At this point we have an event sourcing system for creating groups
 
 ## Read model: handling events
 
@@ -171,6 +219,8 @@ Generic Eventsourcing / CQRS implementation in Go with a focus on simplicity
       return l.rm.Get(ctx, aggregateMatcher(query))
     }
 
+    // aggregateMatcher is a helper function to build the aggregate matcher based on the query
+    // in a database scenario it would be used to build the where clause
     func aggregateMatcher(query GroupQuery) readmodel.AggregateMatcher[domain.Group] {
       var matcher readmodel.AggregateMatcher[domain.Group]
 
