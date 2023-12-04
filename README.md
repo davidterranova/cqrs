@@ -200,7 +200,6 @@ Generic Eventsourcing / CQRS implementation in Go
           domain.NewGroup,
           domain.EvtTypeGroupCreated,
           eventsourcing.EvtTypeNil, // Replace by the appropriate event type when the event is implemented
-          eventsourcing.EvtTypeNil, // Replace by the appropriate events type when the event is implemented. Make sure to list all the events the read model should be handling
         ),
       }
     }
