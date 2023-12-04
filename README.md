@@ -83,7 +83,10 @@ Generic Eventsourcing / CQRS implementation in Go
     // EvtGroupNameSet is emitted when name is set
     type EvtGroupNameSet struct {
       *eventsourcing.EventBase[Group]
-      name string
+      // Name is the new name of the group
+      //! Make sure to have all the properties of the event exported
+      //! or they will not be marshalled / unmarshalled properly
+      Name string
     }
 
     func NewEvtGroupNameSet(aggregateId uuid.UUID, aggregateVersion int, updatedBy eventsourcing.User, name string) *EvtGroupNameSet {
@@ -95,7 +98,7 @@ Generic Eventsourcing / CQRS implementation in Go
           aggregateId,
           updatedBy,
         ),
-        name: name,
+        Name: name,
       }
     }
 
