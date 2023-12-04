@@ -2,6 +2,7 @@ package eventrepository
 
 import (
 	"context"
+	"sync"
 
 	"github.com/davidterranova/cqrs/eventsourcing"
 	"github.com/google/uuid"
@@ -11,9 +12,9 @@ import (
 type inMemoryEventRepository struct {
 	// events are stored by aggregate id
 	aggregateEvents map[uuid.UUID][]*eventsourcing.EventInternal
-
 	// outbox for unpublished events
 	outbox []*eventsourcing.EventInternal
+	mtx    sync.RWMutex
 }
 
 func NewInMemoryEventRepository() eventsourcing.EventRepository {
@@ -24,6 +25,9 @@ func NewInMemoryEventRepository() eventsourcing.EventRepository {
 }
 
 func (r *inMemoryEventRepository) Save(_ context.Context, publishOutbox bool, events ...eventsourcing.EventInternal) error {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+
 	for _, e := range events {
 		e := e
 		log.Debug().
@@ -50,6 +54,9 @@ func (r *inMemoryEventRepository) Save(_ context.Context, publishOutbox bool, ev
 
 //nolint:cyclop
 func (r *inMemoryEventRepository) Get(_ context.Context, filter eventsourcing.EventQuery) ([]eventsourcing.EventInternal, error) {
+	r.mtx.RLock()
+	defer r.mtx.RUnlock()
+
 	events := make([]eventsourcing.EventInternal, 0)
 	for _, me := range r.outbox {
 		add := true
@@ -99,6 +106,9 @@ func (r *inMemoryEventRepository) Get(_ context.Context, filter eventsourcing.Ev
 }
 
 func (r *inMemoryEventRepository) GetUnpublished(_ context.Context, aggregateType eventsourcing.AggregateType, batchSize int) ([]eventsourcing.EventInternal, error) {
+	r.mtx.RLock()
+	defer r.mtx.RUnlock()
+
 	nbEvents := len(r.outbox)
 	if batchSize < nbEvents {
 		nbEvents = batchSize
@@ -121,6 +131,9 @@ func (r *inMemoryEventRepository) GetUnpublished(_ context.Context, aggregateTyp
 }
 
 func (r *inMemoryEventRepository) MarkAs(_ context.Context, asPublished bool, events ...eventsourcing.EventInternal) error {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+
 	log.Debug().
 		Int("nb_events", len(events)).
 		Bool("published", asPublished).
