@@ -50,7 +50,7 @@ func aggregateMatcherTestAggregateValue(value *int) AggregateMatcher[testAggrega
 //nolint:funlen
 func TestInMemoryReadModelEventMatcher(t *testing.T) {
 	ctx := context.Background()
-	rm := NewInMemoryReadModel(nil, newTestAggregate, eventTypeNil, eventTypeNil, eventTypeNil)
+	rm := NewInMemoryReadModel(nil, newTestAggregate, eventTypeNil, eventTypeNil)
 
 	aggs := []*testAggregate{
 		newTestAggregateWithValue(1),
@@ -180,7 +180,7 @@ func (e evtTestAggregateValueSet) Apply(a *testAggregate) error {
 }
 
 func TestInMemoryReadModelHandleEvent(t *testing.T) {
-	rm := NewInMemoryReadModel(nil, newTestAggregate, evtTypeTestAggregateCreated, eventTypeNil, evtTypeTestAggregateValueSet)
+	rm := NewInMemoryReadModel(nil, newTestAggregate, evtTypeTestAggregateCreated, eventTypeNil)
 
 	// issuer := domain.NewUser()
 	aggregateId1 := uuid.New()

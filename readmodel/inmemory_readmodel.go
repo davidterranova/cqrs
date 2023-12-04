@@ -18,9 +18,8 @@ type InMemoryReadModel[T eventsourcing.Aggregate] struct {
 
 	aggregateFactory eventsourcing.AggregateFactory[T]
 
-	createdEventType  eventsourcing.EventType
-	updatedEventTypes []eventsourcing.EventType
-	deletedEventType  eventsourcing.EventType
+	createdEventType eventsourcing.EventType
+	deletedEventType eventsourcing.EventType
 }
 
 func NewInMemoryReadModel[T eventsourcing.Aggregate](
@@ -28,14 +27,12 @@ func NewInMemoryReadModel[T eventsourcing.Aggregate](
 	aggregateFactory eventsourcing.AggregateFactory[T],
 	createdEventType eventsourcing.EventType,
 	deletedEventType eventsourcing.EventType,
-	updatedEventTypes ...eventsourcing.EventType,
 ) *InMemoryReadModel[T] {
 	rM := &InMemoryReadModel[T]{
-		aggregates:        []*T{},
-		aggregateFactory:  aggregateFactory,
-		createdEventType:  createdEventType,
-		updatedEventTypes: updatedEventTypes,
-		deletedEventType:  deletedEventType,
+		aggregates:       []*T{},
+		aggregateFactory: aggregateFactory,
+		createdEventType: createdEventType,
+		deletedEventType: deletedEventType,
 	}
 
 	if eventStream != nil {
@@ -63,7 +60,16 @@ func (rM *InMemoryReadModel[T]) HandleEvent(e eventsourcing.Event[T]) {
 		rM.RWMutex.Lock()
 		rM.aggregates = append(rM.aggregates, t)
 		rM.RWMutex.Unlock()
-	case rM.isUpdatedEvent(e):
+	case rM.isDeletedEvent(e):
+		err := rM.delete(e.AggregateId())
+		if err != nil {
+			log.Error().Err(err).Msgf("error applying event %s on %s %q", e.EventType(), e.AggregateType(), e.AggregateId())
+			return
+		}
+	case rM.isNilEvent(e):
+		// no op
+	default:
+		// update events
 		aggregateId := e.AggregateId()
 		t, err := rM.Get(context.Background(), AggregateMatcherAggregateId[T](&aggregateId))
 		if err != nil {
@@ -76,16 +82,6 @@ func (rM *InMemoryReadModel[T]) HandleEvent(e eventsourcing.Event[T]) {
 			log.Error().Err(err).Msgf("error applying event %s on %s %q", e.EventType(), e.AggregateType(), e.AggregateId())
 			return
 		}
-	case rM.isDeletedEvent(e):
-		err := rM.delete(e.AggregateId())
-		if err != nil {
-			log.Error().Err(err).Msgf("error applying event %s on %s %q", e.EventType(), e.AggregateType(), e.AggregateId())
-			return
-		}
-	case rM.isNilEvent(e):
-		// no op
-	default:
-		log.Error().Err(ErrUnknownEvent).Msgf("unknown event %s.%s", e.AggregateType(), e.EventType())
 	}
 
 	log.Debug().Str("event_id", e.Id().String()).Str("event_type", e.EventType().String()).Msg("read_model event applied")
@@ -93,16 +89,6 @@ func (rM *InMemoryReadModel[T]) HandleEvent(e eventsourcing.Event[T]) {
 
 func (rM *InMemoryReadModel[T]) isCreatedEvent(e eventsourcing.Event[T]) bool {
 	return e.EventType() == rM.createdEventType
-}
-
-func (rM *InMemoryReadModel[T]) isUpdatedEvent(e eventsourcing.Event[T]) bool {
-	for _, evtType := range rM.updatedEventTypes {
-		if evtType == e.EventType() {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (rM *InMemoryReadModel[T]) isDeletedEvent(e eventsourcing.Event[T]) bool {
