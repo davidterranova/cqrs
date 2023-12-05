@@ -144,9 +144,11 @@ Generic Eventsourcing / CQRS implementation in Go
         return nil, err
       }
 
-      // we return an error if the command should not be accepted
-      // business logic to check if the command is valid should be implemented here
+      // aggregate is not loaded from the eventstore at this stage
+      // it is cheap to perform any business logic check at this stage
       // like checking if it is possible to create a group for this issuer
+      
+      // we should return an error if the command should not be accepted
 
       return h.commandHandler.HandleCommand(
         ctx, 
@@ -163,6 +165,10 @@ Generic Eventsourcing / CQRS implementation in Go
 
     // Apply returns a list of events that should be emitted when the command is applied
     func (c cmdCreate) Apply(aggregate *domain.Group) ([]eventsourcing.Event[domain.Group], error) {
+      // aggregate is at this stage loaded from write model (eventstore)
+      // more advanced business logic involving the aggregate itself
+      // should be done here
+
       return []eventsourcing.Event[domain.Group]{
         // the new group is created
         domain.NewEvtGroupCreated(c.AggregateId(), 0, c.IssuedBy()),
