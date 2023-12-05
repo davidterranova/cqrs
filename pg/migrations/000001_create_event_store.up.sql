@@ -1,4 +1,4 @@
-SET SCHEMA 'event_store';
+SET SCHEMA 'eventstore';
 
 CREATE TABLE IF NOT EXISTS events (
   event_id UUID PRIMARY KEY,

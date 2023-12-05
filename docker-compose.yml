@@ -1,0 +1,37 @@
+version: '3.9'
+
+services:
+  db:
+    image: public.ecr.aws/docker/library/postgres:14.3
+    restart: always
+    env_file: .env
+    volumes:
+      - ./pg/bootstrap:/docker-entrypoint-initdb.d
+    command: [ "postgres", "-c", "log_statement=all" ]
+    ports:
+      - 5435:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 1s
+      timeout: 1s
+      retries: 10
+
+  migrate:
+    image: migrate/migrate
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./pg/migrations:/pg/migrations
+    command: ["-path", "/pg/migrations/", "-database", "${POSTGRES_CONN_STRING}", "up"]
+
+  cqrs-test:
+    build: 
+      context: .
+      dockerfile: Dockerfile.test
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
