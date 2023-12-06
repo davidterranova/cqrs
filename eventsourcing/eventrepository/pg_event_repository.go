@@ -33,7 +33,7 @@ func (r pgEventRepository) Save(ctx context.Context, publishOutbox bool, events 
 
 		outboxEntries = append(outboxEntries, &pgEventOutbox{
 			EventId:          event.EventId,
-			Published:        false,
+			Published:        event.EventPublished,
 			AggregateType:    string(event.AggregateType),
 			AggregateVersion: event.AggregateVersion,
 		})
