@@ -74,76 +74,56 @@ func (eq *eventQuery) UpToVersion() *int {
 
 func EventQueryWithAggregateId(aggregateId uuid.UUID) EventQueryOption {
 	return func(eq *eventQuery) {
-		// if aggregateId != nil {
 		eq.aggregateId = &aggregateId
-		// }
 	}
 }
 
 func EventQueryWithAggregateType(aggregateType AggregateType) EventQueryOption {
 	return func(eq *eventQuery) {
-		// if aggregateType != nil {
 		eq.aggregateType = &aggregateType
-		// }
 	}
 }
 
 func EventQueryWithEventType(eventType EventType) EventQueryOption {
 	return func(eq *eventQuery) {
-		// if eventType != nil {
 		eq.eventType = &eventType
-		// }
 	}
 }
 
 func EventQueryWithPublished(published bool) EventQueryOption {
 	return func(eq *eventQuery) {
-		// if published != nil {
 		eq.published = &published
-		// }
 	}
 }
 
 func EventQueryWithIssuedBy(issuedBy User) EventQueryOption {
 	return func(eq *eventQuery) {
-		// if issuedBy != nil {
 		eq.issuedBy = issuedBy
-		// }
 	}
 }
 
 func EventQueryWithLimit(limit int) EventQueryOption {
 	return func(eq *eventQuery) {
-		// if limit != nil {
 		eq.limit = &limit
-		// }
 	}
 }
 
 func EventQueryWithOrderBy(orderBy string, orderDirection string) EventQueryOption {
 	return func(eq *eventQuery) {
-		// if orderBy != nil {
 		eq.orderBy = &orderBy
-		// }
 
-		// if orderDirection != nil {
 		eq.orderDirection = &orderBy
-		// }
 	}
 }
 
 func EventQueryWithGroupBy(group_by string) EventQueryOption {
 	return func(eq *eventQuery) {
-		// if group_by != nil {
 		eq.group_by = &group_by
-		// }
 	}
 }
 
 func EventQueryWithUpToVersion(upToVersion int) EventQueryOption {
 	return func(eq *eventQuery) {
-		// if upToVersion != nil {
 		eq.upToVersion = &upToVersion
-		// }
 	}
 }
