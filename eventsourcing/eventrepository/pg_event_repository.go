@@ -68,11 +68,11 @@ func (r pgEventRepository) Get(ctx context.Context, filter eventsourcing.EventQu
 		Model(&pgEvent{}).
 		Scopes(
 			issuedByScope(filter.IssuedBy()),
-			publishedScope(filter.Published()),
 			eventTypeScope(filter.EventType()),
 			aggregateTypeScope(filter.AggregateType()),
 			aggregateIdScope(filter.AggregateId()),
 			upToVersionScope(filter.UpToVersion()),
+			publishedScope(filter.Published()),
 		)
 
 	if filter.Limit() != nil {
@@ -83,7 +83,6 @@ func (r pgEventRepository) Get(ctx context.Context, filter eventsourcing.EventQu
 	}
 
 	err := query.
-		Joins("Outbox"). // Preload("Outbox") to do it in two queries
 		Find(&pgEvents).
 		Error
 	if err != nil {
@@ -170,7 +169,8 @@ func publishedScope(published *bool) func(db *gorm.DB) *gorm.DB {
 			return db
 		}
 
-		return db.Where("events_outbox.published = ?", *published)
+		// return db.InnerJoins("Outbox", db.Where(&pgEventOutbox{Published: *published})) //! according to doc, this should work but does not https://gorm.io/docs/query.html
+		return db.InnerJoins("Join events_outbox Outbox ON Outbox.event_id = events.event_id WHERE Outbox.published = ?", published)
 	}
 }
 
