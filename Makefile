@@ -1,5 +1,5 @@
 include .env
-export $(shell sed 's/=.*//' .env)
+export $(shell sed 's/=.*//' .env.docker)
 
 TEST_TAGS ?= unit,integration
 TEST_VERBOSE ?= 

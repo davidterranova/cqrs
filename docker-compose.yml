@@ -4,7 +4,7 @@ services:
   db:
     image: public.ecr.aws/docker/library/postgres:14.3
     restart: always
-    env_file: .env
+    env_file: .env.docker
     volumes:
       - ./pg/bootstrap:/docker-entrypoint-initdb.d
     command: [ "postgres", "-c", "log_statement=all" ]
@@ -18,7 +18,7 @@ services:
 
   migrate:
     image: migrate/migrate
-    env_file: .env
+    env_file: .env.docker
     depends_on:
       db:
         condition: service_healthy
@@ -34,4 +34,4 @@ services:
       db:
         condition: service_healthy
     env_file:
-      - .env
+      - .env.docker

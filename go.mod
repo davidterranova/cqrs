@@ -8,6 +8,7 @@ require (
 	github.com/google/uuid v1.4.0
 	github.com/gorilla/mux v1.7.4
 	github.com/hashicorp/golang-lru/v2 v2.0.7
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/rs/cors v1.10.1
 	github.com/rs/zerolog v1.31.0
 	github.com/stretchr/testify v1.8.1
