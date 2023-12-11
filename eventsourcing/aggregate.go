@@ -20,6 +20,7 @@ type AggregateBase[T Aggregate] struct {
 	aggregateVersion int
 	events           []Event[T]
 
+	issuedBy  User
 	createdAt time.Time
 	updatedAt time.Time
 	deletedAt *time.Time
@@ -36,6 +37,18 @@ func NewAggregateBase[T Aggregate](aggregateId uuid.UUID, version int) *Aggregat
 	}
 }
 
+func NewFullAggregateBase[T Aggregate](aggregateId uuid.UUID, version int, createdAt time.Time, updatedAt time.Time, deletedAt *time.Time, issuedBy User) *AggregateBase[T] {
+	return &AggregateBase[T]{
+		aggregateId:      aggregateId,
+		aggregateVersion: version,
+		createdAt:        createdAt,
+		updatedAt:        updatedAt,
+		deletedAt:        deletedAt,
+		issuedBy:         issuedBy,
+		events:           make([]Event[T], 0),
+	}
+}
+
 func (a AggregateBase[T]) AggregateId() uuid.UUID {
 	return a.aggregateId
 }
@@ -44,6 +57,7 @@ func (a AggregateBase[T]) AggregateId() uuid.UUID {
 func (a *AggregateBase[T]) Init(e Event[T]) {
 	a.aggregateId = e.AggregateId()
 	a.createdAt = e.IssuedAt()
+	a.issuedBy = e.IssuedBy()
 	a.Process(e)
 }
 
@@ -75,6 +89,10 @@ func (a AggregateBase[T]) AggregateVersion() int {
 
 func (a AggregateBase[T]) Events() []Event[T] {
 	return a.events
+}
+
+func (a AggregateBase[T]) IssuedBy() User {
+	return a.issuedBy
 }
 
 func (a AggregateBase[T]) CreatedAt() time.Time {
