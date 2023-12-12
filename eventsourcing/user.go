@@ -16,8 +16,10 @@ type User interface {
 
 var (
 	ErrInvalidUser = errors.New("invalid user")
-	SystemUser     = &systemUser{}
-
+	// SystemUser is a generic system user
+	// nolint:gochecknoglobals
+	SystemUser = &systemUser{}
+	// nolint:gochecknoglobals
 	systemUserId = uuid.MustParse("99999999-9999-9999-9999-999999999999")
 )
 

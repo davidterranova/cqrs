@@ -18,7 +18,13 @@ type App[T eventsourcing.Aggregate] struct {
 	republishAggregate *usecase.RepublishAggregateHandler[T]
 }
 
-func NewApp[T eventsourcing.Aggregate](eventRepository eventsourcing.EventRepository, registry eventsourcing.EventRegistry[T], userFactory eventsourcing.UserFactory, aggregateType eventsourcing.AggregateType, factory eventsourcing.AggregateFactory[T]) (*App[T], error) {
+func NewApp[T eventsourcing.Aggregate](
+	eventRepository eventsourcing.EventRepository,
+	registry eventsourcing.EventRegistry[T],
+	userFactory eventsourcing.UserFactory,
+	aggregateType eventsourcing.AggregateType,
+	factory eventsourcing.AggregateFactory[T],
+) (*App[T], error) {
 	// set to false to disable CQRS and remain in eventsourcing context
 	CQRS := true
 	eventstore := eventsourcing.NewEventStore[T](eventRepository, registry, userFactory, CQRS)
