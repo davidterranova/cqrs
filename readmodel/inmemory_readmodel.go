@@ -2,114 +2,86 @@ package readmodel
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/davidterranova/cqrs/eventsourcing"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 )
-
-// AggregateMatcher is a function that returns true if the given aggregate matches the criteria
-type AggregateMatcher[T eventsourcing.Aggregate] func(u *T) bool
 
 type InMemoryReadModel[T eventsourcing.Aggregate] struct {
 	aggregates []*T
 	sync.RWMutex
 
-	aggregateFactory eventsourcing.AggregateFactory[T]
-
-	createdEventType eventsourcing.EventType
-	deletedEventType eventsourcing.EventType
+	*GenericHandler[T]
 }
+
+type AggregateMatcher[T eventsourcing.Aggregate] func(u *T) bool
 
 func NewInMemoryReadModel[T eventsourcing.Aggregate](
 	eventStream eventsourcing.Subscriber[T],
 	aggregateFactory eventsourcing.AggregateFactory[T],
-	createdEventType eventsourcing.EventType,
-	deletedEventType eventsourcing.EventType,
+	evtTypeCreated eventsourcing.EventType,
+	evtTypeDeleted eventsourcing.EventType,
 ) *InMemoryReadModel[T] {
-	rM := &InMemoryReadModel[T]{
-		aggregates:       []*T{},
-		aggregateFactory: aggregateFactory,
-		createdEventType: createdEventType,
-		deletedEventType: deletedEventType,
+	rm := &InMemoryReadModel[T]{
+		aggregates: []*T{},
 	}
+
+	rm.GenericHandler = NewGenericHandler[T](
+		aggregateFactory,
+		evtTypeCreated,
+		evtTypeDeleted,
+		rm.create,
+		rm.update,
+		rm.delete,
+	)
 
 	if eventStream != nil {
-		eventStream.Subscribe(context.Background(), rM.HandleEvent)
+		eventStream.Subscribe(context.Background(), rm.HandleEvent)
 	}
 
-	return rM
-}
-
-func (rM *InMemoryReadModel[T]) HandleEvent(e eventsourcing.Event[T]) {
-	log.Debug().
-		Str("event_type", e.EventType().String()).
-		Str("aggregate_type", string(e.AggregateType())).
-		Str("aggregate_id", e.AggregateId().String()).
-		Msg("read_model: handling event")
-	switch {
-	case rM.isCreatedEvent(e):
-		t := rM.aggregateFactory()
-		err := e.Apply(t)
-		if err != nil {
-			log.Error().Err(err).Msgf("error applying event %s on %s %q", e.EventType(), e.AggregateType(), e.AggregateId())
-			return
-		}
-
-		rM.RWMutex.Lock()
-		rM.aggregates = append(rM.aggregates, t)
-		rM.RWMutex.Unlock()
-	case rM.isDeletedEvent(e):
-		err := rM.delete(e.AggregateId())
-		if err != nil {
-			log.Error().Err(err).Msgf("error applying event %s on %s %q", e.EventType(), e.AggregateType(), e.AggregateId())
-			return
-		}
-	case rM.isNilEvent(e):
-		// no op
-	default:
-		// update events
-		aggregateId := e.AggregateId()
-		t, err := rM.Get(context.Background(), AggregateMatcherAggregateId[T](&aggregateId))
-		if err != nil {
-			log.Error().Err(err).Msgf("error applying event %s on %s %q", e.EventType(), e.AggregateType(), e.AggregateId())
-			return
-		}
-
-		err = e.Apply(t)
-		if err != nil {
-			log.Error().Err(err).Msgf("error applying event %s on %s %q", e.EventType(), e.AggregateType(), e.AggregateId())
-			return
-		}
-	}
-
-	log.Debug().Str("event_id", e.Id().String()).Str("event_type", e.EventType().String()).Msg("read_model event applied")
-}
-
-func (rM *InMemoryReadModel[T]) isCreatedEvent(e eventsourcing.Event[T]) bool {
-	return e.EventType() == rM.createdEventType
-}
-
-func (rM *InMemoryReadModel[T]) isDeletedEvent(e eventsourcing.Event[T]) bool {
-	return e.EventType() == rM.deletedEventType
-}
-
-func (rM *InMemoryReadModel[T]) isNilEvent(e eventsourcing.Event[T]) bool {
-	return e.EventType() == eventsourcing.EvtTypeNil
+	return rm
 }
 
 func (rM *InMemoryReadModel[T]) Find(_ context.Context, query AggregateMatcher[T]) ([]*T, error) {
-	return rM.findAggregates(query), nil
+	return rM.find(query), nil
 }
 
 func (rM *InMemoryReadModel[T]) Get(_ context.Context, query AggregateMatcher[T]) (*T, error) {
-	matched := rM.findAggregates(query)
+	matched := rM.find(query)
 	if len(matched) == 0 {
 		return nil, ErrNotFound
 	}
 
 	return matched[0], nil
+}
+
+func (rM *InMemoryReadModel[T]) create(aggregate *T) error {
+	rM.RWMutex.Lock()
+	defer rM.RWMutex.Unlock()
+
+	rM.aggregates = append(rM.aggregates, aggregate)
+
+	return nil
+}
+
+func (rM *InMemoryReadModel[T]) update(aggregateId uuid.UUID, fnRepo func(aggregate T) (T, error)) error {
+	aggregates := rM.find(AggregateMatcherAggregateId[T](&aggregateId))
+	if len(aggregates) == 0 {
+		return ErrNotFound
+	}
+
+	updated, err := fnRepo(*aggregates[0])
+	if err != nil {
+		return fmt.Errorf("error updating aggregate: %w", err)
+	}
+
+	rM.RWMutex.Lock()
+	defer rM.RWMutex.Unlock()
+	*aggregates[0] = updated
+
+	return nil
 }
 
 func (rM *InMemoryReadModel[T]) delete(aggregateId uuid.UUID) error {
@@ -125,7 +97,7 @@ func (rM *InMemoryReadModel[T]) delete(aggregateId uuid.UUID) error {
 	return ErrNotFound
 }
 
-func (rM *InMemoryReadModel[T]) findAggregates(matcher AggregateMatcher[T]) []*T {
+func (rM *InMemoryReadModel[T]) find(matcher AggregateMatcher[T]) []*T {
 	var aggs []*T
 
 	rM.RLock()
