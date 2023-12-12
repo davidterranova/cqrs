@@ -1,8 +1,12 @@
-include .env
+include .env.docker
 export $(shell sed 's/=.*//' .env.docker)
 
 TEST_TAGS ?= unit,integration
 TEST_VERBOSE ?= 
+
+.PHONY: test-unit
+test-unit:
+	go test $(TEST_VERBOSE) ./... --cover -count=1 --tags=unit
 
 .PHONY: test
 test:

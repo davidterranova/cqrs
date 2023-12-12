@@ -13,5 +13,5 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: "1.20"
-      - name: Test
-        run: make test TEST_TAGS=unit
+      - name: Unit test
+        run: make test-unit
