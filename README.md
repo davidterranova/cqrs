@@ -1,5 +1,8 @@
 # CQRS
-Generic Eventsourcing / CQRS implementation in Go 
+Generic Eventsourcing / CQRS implementation in Go.
+For the sack of the example, we just go through a CRUD use case.
+Feel free to implement the read model with the appropriate database architecture
+that matches your usecase.
 
 ## Write model: creating a new aggregate
 
@@ -38,8 +41,8 @@ Generic Eventsourcing / CQRS implementation in Go
    ```go
    const EvtTypeGroupCreated       eventsourcing.EventType = "group.created"
 
-   // RegisterGroupEvents registers events so they can be hydrated from the event store
-   func RegisterGroupEvents(registry eventsourcing.EventRegistry[Group]) {
+   // RegisterEvents registers events so they can be hydrated from the event store
+   func RegisterEvents(registry eventsourcing.EventRegistry[Group]) {
       registry.Register(EvtTypeGroupCreated, func() eventsourcing.Event[Group] {
         return &EvtGroupCreated{
           EventBase: &eventsourcing.EventBase[Group]{},
@@ -181,6 +184,11 @@ Generic Eventsourcing / CQRS implementation in Go
    At this point we have an event sourcing system for creating groups
 
 ## Read model: handling events
+
+The following is a generic read model implementation that suits development and tests purposes.
+The generic read model can also be used in combination with proper database implementation 
+for scaffolding purposes but should ideally be replaced by a custom implementation
+to decrease the number of round trips and queries to the database.
 
 1. Create a new read model (in memory for the example, relying on the generic one from the library)
    ```go
