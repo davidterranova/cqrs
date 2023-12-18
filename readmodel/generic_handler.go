@@ -40,8 +40,9 @@ func NewGenericHandler[T eventsourcing.Aggregate](
 	createFn FnCreateRMAggregate[T],
 	updateFn FnUpdateRMAggregate[T],
 	deleteFn FnDeleteRMAggregate[T],
+	eventStream eventsourcing.Subscriber[T],
 ) *GenericHandler[T] {
-	return &GenericHandler[T]{
+	gh := &GenericHandler[T]{
 		aggFactory:     aggFactory,
 		evtTypeCreated: evtTypeCreated,
 		evtTypeDeleted: evtTypeDeleted,
@@ -49,6 +50,12 @@ func NewGenericHandler[T eventsourcing.Aggregate](
 		updateFn:       updateFn,
 		deleteFn:       deleteFn,
 	}
+
+	if eventStream != nil {
+		eventStream.Subscribe(gh.HandleEvent)
+	}
+
+	return gh
 }
 
 func (rm GenericHandler[T]) HandleEvent(e eventsourcing.Event[T]) {

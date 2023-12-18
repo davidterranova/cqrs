@@ -35,11 +35,8 @@ func NewInMemoryReadModel[T eventsourcing.Aggregate](
 		rm.create,
 		rm.update,
 		rm.delete,
+		eventStream,
 	)
-
-	if eventStream != nil {
-		eventStream.Subscribe(context.Background(), rm.HandleEvent)
-	}
 
 	return rm
 }
