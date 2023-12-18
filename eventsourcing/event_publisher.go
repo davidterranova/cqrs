@@ -37,6 +37,9 @@ func (p *EventStreamPublisher[T]) Run(ctx context.Context) {
 	var b backoff.BackOff
 	if !p.backoff {
 		b = backoff.NewConstantBackOff(0 * time.Millisecond)
+		log.Ctx(ctx).
+			Warn().
+			Msg("event publisher: backoff disabled")
 	} else {
 		b = backoff.WithMaxRetries(
 			backoff.WithContext(
@@ -45,6 +48,10 @@ func (p *EventStreamPublisher[T]) Run(ctx context.Context) {
 			),
 			5,
 		)
+		log.Ctx(ctx).
+			Debug().
+			Int("max_retries", 5).
+			Msg("event publisher: explonential backoff enabled")
 	}
 
 	for {
@@ -86,7 +93,7 @@ func (p *EventStreamPublisher[T]) processBatch(ctx context.Context) (int, error)
 		return -1, fmt.Errorf("event publisher: failed to convert internal events to events: %w", err)
 	}
 
-	err = p.stream.Publish(ctx, events...)
+	err = p.stream.Publish(events...)
 	if err != nil {
 		return -1, err
 	}

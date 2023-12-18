@@ -25,7 +25,7 @@ type CacheOption struct {
 // Providing 0 TTL turns expiring off.
 func NewCache[K comparable, V any](option CacheOption) Cache[K, V] {
 	if option.Disabled || option.Size < 0 {
-		log.Info().Msg("cache disabled")
+		log.Debug().Msg("cache disabled")
 		return &noopCache[K, V]{}
 	}
 
