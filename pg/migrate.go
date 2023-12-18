@@ -9,9 +9,12 @@ import (
 	"path"
 	"strconv"
 
+	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/source"
 	"github.com/rs/zerolog/log"
 )
+
+const EventSourcing = "eventsourcing"
 
 //go:embed migrations/*.sql
 var EventSourcingFS embed.FS
@@ -26,9 +29,12 @@ type iMigration struct {
 }
 
 func NewMigrations() *Migrations {
-	return &Migrations{
+	m := &Migrations{
 		localFS: map[string]iMigration{},
 	}
+	m.Append(EventSourcing, "migrations", EventSourcingFS)
+
+	return m
 }
 
 func (m *Migrations) Append(key string, path string, lfs embed.FS) {
@@ -38,14 +44,61 @@ func (m *Migrations) Append(key string, path string, lfs embed.FS) {
 	}
 }
 
-func (m *Migrations) Get(key string) (embed.FS, string, error) {
-	im, ok := m.localFS[key]
-	if !ok {
-		return embed.FS{}, "", fmt.Errorf("migration %s not found", key)
+func (m Migrations) Keys() []string {
+	keys := make([]string, 0, len(m.localFS))
+	for k := range m.localFS {
+		keys = append(keys, k)
 	}
 
-	return im.FS, im.path, nil
+	return keys
 }
+
+func (m Migrations) MigrateAll(dbConnStr string) error {
+	for _, key := range m.Keys() {
+		migrator, err := m.Get(key, dbConnStr)
+		if err != nil {
+			return fmt.Errorf("failed to get migrator for %s: %w", key, err)
+		}
+
+		if err := migrator.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+			return fmt.Errorf("failed to migrate %s: %w", key, err)
+		}
+	}
+
+	return nil
+}
+
+func (m *Migrations) Get(key string, dbConnStr string) (*migrate.Migrate, error) {
+	im, ok := m.localFS[key]
+	if !ok {
+		return nil, fmt.Errorf("migration %s not found", key)
+	}
+
+	return im.getMigrate(dbConnStr)
+}
+
+func (im iMigration) getMigrate(connString string) (*migrate.Migrate, error) {
+	driver, err := newMigrator(im.FS, im.path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create driver: %w", err)
+	}
+
+	m, err := migrate.NewWithSourceInstance("iofs", driver, connString)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create migrator: %w", err)
+	}
+
+	return m, nil
+}
+
+// func (m *Migrations) Get(key string) (embed.FS, string, error) {
+// 	im, ok := m.localFS[key]
+// 	if !ok {
+// 		return embed.FS{}, "", fmt.Errorf("migration %s not found", key)
+// 	}
+
+// 	return im.FS, im.path, nil
+// }
 
 type driver struct {
 	PartialDriver
@@ -96,7 +149,7 @@ func (d *PartialDriver) Init(fsys fs.FS, path string) error {
 		if e.IsDir() {
 			continue
 		}
-		log.Info().Str("file", e.Name()).Msg("found migration")
+		log.Debug().Str("file", e.Name()).Msg("found migration")
 		m, err := source.DefaultParse(e.Name())
 		if err != nil {
 			continue
