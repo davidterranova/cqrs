@@ -28,9 +28,12 @@ func NewInMemoryPubSub[T eventsourcing.Aggregate](ctx context.Context, buffer in
 	return p
 }
 
-func (p *eventStream[T]) Publish(ctx context.Context, events ...eventsourcing.Event[T]) error {
+func (p *eventStream[T]) Publish(events ...eventsourcing.Event[T]) error {
 	for _, event := range events {
-		log.Ctx(ctx).Debug().Str("type", event.EventType().String()).Interface("event", event).Msg("publishing event")
+		log.Debug().
+			Str("type", event.EventType().String()).
+			Interface("event", event).
+			Msg("publishing event")
 		p.stream <- event
 	}
 
@@ -55,7 +58,7 @@ func (p *eventStream[T]) Run() {
 	}()
 }
 
-func (p *eventStream[T]) Subscribe(ctx context.Context, sub eventsourcing.SubscribeFn[T]) {
+func (p *eventStream[T]) Subscribe(sub eventsourcing.SubscribeFn[T]) {
 	p.mtx.Lock()
 	p.subscribers = append(p.subscribers, sub)
 	p.mtx.Unlock()
