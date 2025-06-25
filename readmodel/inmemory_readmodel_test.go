@@ -101,7 +101,7 @@ func TestInMemoryReadModelEventMatcher(t *testing.T) {
 		two := 2
 		matchedAggregates, err := rm.Find(
 			ctx,
-			AggregateMatcherOr[testAggregate](
+			AggregateMatcherOr(
 				aggregateMatcherTestAggregateValue(&two),
 				AggregateMatcherAggregateId[testAggregate](&aggId),
 			),
@@ -115,7 +115,7 @@ func TestInMemoryReadModelEventMatcher(t *testing.T) {
 		one := 1
 		matchedAggregates, err := rm.Find(
 			ctx,
-			AggregateMatcherAnd[testAggregate](
+			AggregateMatcherAnd(
 				aggregateMatcherTestAggregateValue(&one),
 				AggregateMatcherAggregateId[testAggregate](&aggId),
 			),
@@ -126,7 +126,7 @@ func TestInMemoryReadModelEventMatcher(t *testing.T) {
 		two := 2
 		matchedAggregates, err = rm.Find(
 			ctx,
-			AggregateMatcherAnd[testAggregate](
+			AggregateMatcherAnd(
 				aggregateMatcherTestAggregateValue(&two),
 				AggregateMatcherAggregateId[testAggregate](&aggId),
 			),

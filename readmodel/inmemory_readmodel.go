@@ -28,7 +28,7 @@ func NewInMemoryReadModel[T eventsourcing.Aggregate](
 		aggregates: []*T{},
 	}
 
-	rm.GenericHandler = NewGenericHandler[T](
+	rm.GenericHandler = NewGenericHandler(
 		aggregateFactory,
 		evtTypeCreated,
 		evtTypeDeleted,
