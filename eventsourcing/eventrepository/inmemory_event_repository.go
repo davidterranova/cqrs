@@ -115,7 +115,8 @@ func (r *inMemoryEventRepository) GetUnpublished(_ context.Context, aggregateTyp
 	}
 
 	unPublished := make([]eventsourcing.EventInternal, 0, nbEvents)
-	for _, me := range r.outbox {
+	for i := 0; i < nbEvents; i++ {
+		me := r.outbox[i]
 		if !me.EventPublished && me.AggregateType == aggregateType {
 			log.Debug().
 				Str("event_type", string(me.EventType)).

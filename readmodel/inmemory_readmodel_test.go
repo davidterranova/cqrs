@@ -77,6 +77,13 @@ func TestInMemoryReadModelEventMatcher(t *testing.T) {
 		assert.Equal(t, aggs[2], matchedAggregates[0])
 	})
 
+	t.Run("do not match unknown aggregateId", func(t *testing.T) {
+		aggId := uuid.New()
+		matchedAggregates, err := rm.Find(ctx, AggregateMatcherAggregateId[testAggregate](&aggId))
+		require.NoError(t, err)
+		assert.Len(t, matchedAggregates, 0)
+	})
+
 	t.Run("match by value", func(t *testing.T) {
 		one := 1
 		matchedAggregates, err := rm.Find(ctx, aggregateMatcherTestAggregateValue(&one))
